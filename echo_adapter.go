@@ -14,11 +14,11 @@ import (
 
 // EchoLogAdapter extend logrus.Logger
 type EchoLogAdapter struct {
-	*logrus.Logger
+	*Logger
 }
 
 // NewEchoLogAdapter return singleton logger
-func NewEchoLogAdapter(logger *logrus.Logger) *EchoLogAdapter {
+func NewEchoLogAdapter(logger *Logger) *EchoLogAdapter {
 	return &EchoLogAdapter{Logger: logger}
 }
 
@@ -242,26 +242,26 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			req := c.Request()
+			res := c.Response()
 
 			// * set request_id
 			id := c.Request().Header.Get(string(CorrelationIDKey))
 			if id == "" {
 				id = c.Request().Header.Get(string(RequestIDKey))
-				c.Request().Header.Set(string(CorrelationIDKey), id)
+				c.Response().Header().Set(string(RequestIDKey), id)
+			} else {
+				c.Response().Header().Set(string(CorrelationIDKey), id)
 			}
 			if id == "" {
 				id = uuid.NewString()
 				c.Request().Header.Set(string(CorrelationIDKey), id)
+				c.Response().Header().Set(string(CorrelationIDKey), id)
 			}
 
-			// * set request
+			// * set request_id to request context
 			ctx := WithCorrelationID(c.Request().Context(), id)
 			request := c.Request().WithContext(ctx)
 			c.SetRequest(request)
-
-			// * set response
-			res := c.Response()
-			c.Response().Header().Set(string(CorrelationIDKey), id)
 
 			start := time.Now()
 			var err error
@@ -297,7 +297,13 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 				"request_id": GetCorrelationID(ctx),
 				"error":      errStr,
 			}
-			c.Logger().(*EchoLogAdapter).WithFields(trace).Info()
+
+			if logger, ok := c.Logger().(*EchoLogAdapter); ok {
+				logger.WithFields(trace).Info()
+			} else {
+				b, _ := json.Marshal(trace)
+				c.Logger().Info(string(b))
+			}
 
 			return err
 		}

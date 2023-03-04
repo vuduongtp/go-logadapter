@@ -13,22 +13,22 @@ func main() {
 }
 
 func testCreateInstance() {
-	config := logadapter.Config{
+	config := &logadapter.Config{
 		LogLevel:     logadapter.DebugLevel,
 		LogFormat:    logadapter.JSONFormat,
 		IsUseLogFile: true,
 	}
-	logger := logadapter.NewLoggerInstance(config)
+	logger := logadapter.NewLoggerWithConfig(config)
 	logger.Debug("test")
 }
 
 func testGormAdapter() {
-	config := logadapter.Config{
+	config := &logadapter.Config{
 		LogLevel:     logadapter.DebugLevel,
 		LogFormat:    logadapter.JSONFormat,
 		IsUseLogFile: true,
 	}
-	logger := logadapter.NewLoggerInstance(config)
+	logger := logadapter.NewLoggerWithConfig(config)
 
 	// * set log adapter for gorm logging
 	gormConfig := new(gorm.Config)
@@ -41,12 +41,12 @@ func testGormAdapter() {
 }
 
 func testEchoAdapter() {
-	config := logadapter.Config{
+	config := &logadapter.Config{
 		LogLevel:     logadapter.DebugLevel,
 		LogFormat:    logadapter.JSONFormat,
 		IsUseLogFile: true,
 	}
-	logger := logadapter.NewLoggerInstance(config)
+	logger := logadapter.NewLoggerWithConfig(config)
 
 	e := echo.New()
 	// * set log adapter for echo instance
@@ -56,7 +56,7 @@ func testEchoAdapter() {
 	e.Use(logadapter.NewEchoLoggerMiddleware())
 
 	// * log with echo context for log request_id
-	echoContext := e.AcquireContext() // example echo context
+	echoContext := e.AcquireContext() // example echo context, should be replaced with echo.Request().Context()
 	logadapter.LogWithEchoContext(echoContext, "this is message", logadapter.LogTypeDebug, map[string]interface{}{
 		"field_name": "this is log field",
 	}) // log message with extend field

@@ -18,7 +18,7 @@ const (
 
 // GormLogAdapter model
 type GormLogAdapter struct {
-	*logrus.Logger
+	*Logger
 	SlowThreshold         time.Duration
 	SourceField           string
 	SkipErrRecordNotFound bool
@@ -26,7 +26,7 @@ type GormLogAdapter struct {
 }
 
 // NewGormLogAdapter gorm logrus GormLogAdapter
-func NewGormLogAdapter(log *logrus.Logger) *GormLogAdapter {
+func NewGormLogAdapter(log *Logger) *GormLogAdapter {
 	return &GormLogAdapter{
 		SkipErrRecordNotFound: true,
 		Debug:                 true,

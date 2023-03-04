@@ -71,6 +71,53 @@ type FileConfig struct {
 	IsUseLocalTime bool
 }
 
+// Logger instance
+type Logger struct {
+	*log.Logger
+}
+
+// SetFormatter logger formatter
+func (l *Logger) SetFormatter(logFormat LogFormat) {
+	switch logFormat {
+	case JSONFormat:
+		l.Logger.SetFormatter(&log.JSONFormatter{})
+
+	case JSONFormatIndent:
+		l.Logger.SetFormatter(&log.JSONFormatter{PrettyPrint: true})
+
+	default:
+		l.Logger.SetFormatter(&log.TextFormatter{})
+	}
+}
+
+// SetLogFile set log file
+func (l *Logger) SetLogFile(fileConfig *FileConfig) {
+	if fileConfig == nil {
+		fileConfig = getDefaultFileConfig()
+	}
+
+	var lumber = &lumberjack.Logger{
+		Filename:   fileConfig.Filename,
+		MaxSize:    fileConfig.MaxSize,
+		MaxBackups: fileConfig.MaxBackups,
+		MaxAge:     fileConfig.MaxAge,
+		Compress:   fileConfig.IsCompress,
+		LocalTime:  fileConfig.IsUseLocalTime,
+	}
+	writer := io.MultiWriter(os.Stdout, lumber)
+	l.Logger.SetOutput(writer)
+}
+
+// SetLogConsole set log console
+func (l *Logger) SetLogConsole() {
+	l.SetOutput(os.Stdout)
+}
+
+// SetLevel set log level
+func (l *Logger) SetLevel(level Level) {
+	l.Logger.SetLevel(log.Level(level))
+}
+
 func getDefaultFileConfig() *FileConfig {
 	return &FileConfig{
 		Filename:       GetLogFile(),
@@ -82,43 +129,48 @@ func getDefaultFileConfig() *FileConfig {
 	}
 }
 
-// NewLoggerInstance returns a logrus instance
-func NewLoggerInstance(config Config) *log.Logger {
+func getDefaultConfig() *Config {
+	return &Config{
+		LogLevel:     DebugLevel,
+		LogFormat:    JSONFormat,
+		IsUseLogFile: false,
+	}
+}
+
+// NewLoggerWithConfig returns a logger instance with custom configuration
+func NewLoggerWithConfig(config *Config) *Logger {
+	if config == nil {
+		config = getDefaultConfig()
+	}
+
 	logger := log.New()
-
-	switch config.LogFormat {
-	case JSONFormat:
-		logger.SetFormatter(&log.JSONFormatter{})
-
-	case JSONFormatIndent:
-		logger.SetFormatter(&log.JSONFormatter{PrettyPrint: true})
-
-	default:
-		logger.SetFormatter(&log.TextFormatter{})
-	}
-
+	loggerInstance := &Logger{logger}
+	loggerInstance.SetFormatter(config.LogFormat)
 	if config.IsUseLogFile == true {
-		if config.FileConfig == nil {
-			config.FileConfig = getDefaultFileConfig()
-		}
-
-		var lumber = &lumberjack.Logger{
-			Filename:   config.FileConfig.Filename,
-			MaxSize:    config.FileConfig.MaxSize,
-			MaxBackups: config.FileConfig.MaxBackups,
-			MaxAge:     config.FileConfig.MaxAge,
-			Compress:   config.FileConfig.IsCompress,
-			LocalTime:  config.FileConfig.IsUseLocalTime,
-		}
-		writer := io.MultiWriter(os.Stdout, lumber)
-		logger.SetOutput(writer)
+		loggerInstance.SetLogFile(config.FileConfig)
 	} else {
-		logger.SetOutput(os.Stdout)
+		loggerInstance.SetLogConsole()
 	}
+	loggerInstance.SetLevel(config.LogLevel)
+	loggerInstance.Info("Logger instance has been successfully initialized")
 
-	logger.SetLevel(log.Level(config.LogLevel))
+	return loggerInstance
+}
 
-	logger.Info("Logger initialization successful")
+// NewLogger returns a logger instance with default configuration
+func NewLogger() *Logger {
+	config := getDefaultConfig()
 
-	return logger
+	logger := log.New()
+	loggerInstance := &Logger{logger}
+	loggerInstance.SetFormatter(config.LogFormat)
+	if config.IsUseLogFile == true {
+		loggerInstance.SetLogFile(config.FileConfig)
+	} else {
+		loggerInstance.SetLogConsole()
+	}
+	loggerInstance.SetLevel(config.LogLevel)
+	loggerInstance.Info("Logger instance has been successfully initialized")
+
+	return loggerInstance
 }
