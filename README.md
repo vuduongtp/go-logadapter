@@ -2,17 +2,18 @@
 [![License](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/vuduongtp/go-logadapter/blob/main/LICENSE)
 ![GolangVersion](https://img.shields.io/github/go-mod/go-version/vuduongtp/go-logadapter)
 [![Release](https://img.shields.io/github/v/release/vuduongtp/go-logadapter)](https://github.com/vuduongtp/go-logadapter/releases)
+[![Go Reference](https://pkg.go.dev/badge/github.com/vuduongtp/go-logadapter.svg)](https://pkg.go.dev/github.com/vuduongtp/go-logadapter)
 
-## go-logadapter provide a flexible and powerful way to handle logging in applications, and can help in debugging, monitoring, and maintaining the application's performance and behavior.
+**go-logadapter provide a flexible and powerful way to handle logging in applications, and can help in debugging, monitoring, and maintaining the application's performance and behavior**
 
 In Go, the logging package provides a simple logging interface for sending log messages to various outputs, such as the console or a file. However, it can be useful to have more advanced logging features, such as the ability to write logs to multiple destinations, format log messages differently based on severity or context, or filter logs based on certain criteria. To accomplish these more advanced logging features, we can use **go-logadapter**. 
 
-It's a piece of code that sits between the application and the logging package and modifies, enhances the way log messages are handled. It's customized to suit for [Echo web framework](https://github.com/labstack/echo) and [gorm](https://github.com/go-gorm/gorm) and still updating.
+It's a piece of code that sits between the application and the logging package and modifies, enhances the way log messages are handled. It's customized to suit for [Echo web framework](https://github.com/labstack/echo) , [gorm](https://github.com/go-gorm/gorm) and still updating.
 ## Advantages of go-logadapter
 - Writing logs to multiple destinations, such as a file, console.
 - Formatting log messages such as JSON, pretty JSON, text.
 - Filtering logs based on certain criteria, such as log level, module, type, or request_id.
-- Suit specific application needs such as
+- Suit specific application needs such as [echo](https://github.com/labstack/echo) , [gorm](https://github.com/go-gorm/gorm)
 - Can help in debugging an application by providing detailed information about the application's behavior, performance, and errors.
 
 ## Requirements
@@ -29,20 +30,25 @@ $ go get -u github.com/vuduongtp/go-logadapter
 import "github.com/vuduongtp/go-logadapter"
 ```
 ## Basic Example
-
+View full example [here](https://github.com/vuduongtp/go-logadapter/blob/main/test/test.go)
+### Create new simple logger
+```go
+logger := logadapter.NewLogger()
+logger.Debug("test")
+```
+```
+{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05T20:47:28.369102+07:00"}
+{"level":"debug","msg":"test","time":"2023-03-05T20:47:28.369163+07:00"}
+```
 ### Create new logger with config
 ```go
 config := &logadapter.Config{
-    LogLevel:     logadapter.DebugLevel,
-    LogFormat:    logadapter.JSONFormat,
-    IsUseLogFile: true,
+    LogLevel:        logadapter.DebugLevel,
+    LogFormat:       logadapter.JSONFormat,
+    TimestampFormat: time.RFC3339Nano,
+    IsUseLogFile:    true,
 }
 logger := logadapter.NewLoggerWithConfig(config)
-logger.Debug("test")
-```
-### Create new default logger
-```go
-logger := logadapter.NewLogger()
 logger.Debug("test")
 ```
 ### Set logadapter to gorm logger

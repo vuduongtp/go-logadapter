@@ -259,7 +259,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			}
 
 			// * set request_id to request context
-			ctx := WithCorrelationID(c.Request().Context(), id)
+			ctx := withCorrelationID(c.Request().Context(), id)
 			request := c.Request().WithContext(ctx)
 			c.SetRequest(request)
 

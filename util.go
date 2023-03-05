@@ -18,8 +18,8 @@ const (
 	RequestIDKey     Key = "X-Request-ID"
 )
 
-// WithCorrelationID sets correlation id to context
-func WithCorrelationID(parent context.Context, correlationID string) context.Context {
+// withCorrelationID sets correlation id to context
+func withCorrelationID(parent context.Context, correlationID string) context.Context {
 	return context.WithValue(parent, CorrelationIDKey, correlationID)
 }
 

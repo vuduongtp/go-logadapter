@@ -19,13 +19,19 @@ const (
 	LogTypeTrace    = "trace"
 )
 
+// custom constants
+const (
+	DefaultTimestampFormat = "2006-01-02T15:04:05.00000Z07:00"
+	DefaultGormSourceField = "source"
+)
+
 // LogFormat log format
 type LogFormat uint32
 
 // custom log format
 const (
 	JSONFormat LogFormat = iota
-	JSONFormatIndent
+	PrettyJSONFormat
 	TextFormat
 )
 
@@ -55,10 +61,11 @@ const (
 
 // Config config instance log
 type Config struct {
-	IsUseLogFile bool        // set true if write to file
-	FileConfig   *FileConfig // ignore if IsUseLogFile = false, set null if use default log file config
-	LogLevel     Level
-	LogFormat    LogFormat
+	IsUseLogFile    bool        // set true if write to file
+	FileConfig      *FileConfig // ignore if IsUseLogFile = false, set null if use default log file config
+	LogLevel        Level
+	LogFormat       LogFormat
+	TimestampFormat string // if empty, use default timestamp format
 }
 
 // FileConfig config for write log to file
@@ -74,19 +81,34 @@ type FileConfig struct {
 // Logger instance
 type Logger struct {
 	*log.Logger
+	logFormat LogFormat
 }
 
 // SetFormatter logger formatter
 func (l *Logger) SetFormatter(logFormat LogFormat) {
 	switch logFormat {
 	case JSONFormat:
-		l.Logger.SetFormatter(&log.JSONFormatter{})
+		l.Logger.SetFormatter(&log.JSONFormatter{TimestampFormat: DefaultTimestampFormat})
 
-	case JSONFormatIndent:
-		l.Logger.SetFormatter(&log.JSONFormatter{PrettyPrint: true})
+	case PrettyJSONFormat:
+		l.Logger.SetFormatter(&log.JSONFormatter{PrettyPrint: true, TimestampFormat: DefaultTimestampFormat})
 
 	default:
-		l.Logger.SetFormatter(&log.TextFormatter{})
+		l.Logger.SetFormatter(&log.TextFormatter{TimestampFormat: DefaultTimestampFormat})
+	}
+}
+
+// SetTimestampFormat set timestamp format
+func (l *Logger) SetTimestampFormat(timestampFormat string) {
+	switch l.logFormat {
+	case JSONFormat:
+		l.Logger.SetFormatter(&log.JSONFormatter{TimestampFormat: timestampFormat})
+
+	case PrettyJSONFormat:
+		l.Logger.SetFormatter(&log.JSONFormatter{PrettyPrint: true, TimestampFormat: timestampFormat})
+
+	default:
+		l.Logger.SetFormatter(&log.TextFormatter{TimestampFormat: timestampFormat})
 	}
 }
 
@@ -131,9 +153,10 @@ func getDefaultFileConfig() *FileConfig {
 
 func getDefaultConfig() *Config {
 	return &Config{
-		LogLevel:     DebugLevel,
-		LogFormat:    JSONFormat,
-		IsUseLogFile: false,
+		LogLevel:        DebugLevel,
+		LogFormat:       JSONFormat,
+		IsUseLogFile:    false,
+		TimestampFormat: DefaultTimestampFormat,
 	}
 }
 
@@ -142,10 +165,13 @@ func NewLoggerWithConfig(config *Config) *Logger {
 	if config == nil {
 		config = getDefaultConfig()
 	}
-
 	logger := log.New()
-	loggerInstance := &Logger{logger}
+	loggerInstance := &Logger{Logger: logger}
+	loggerInstance.logFormat = config.LogFormat
 	loggerInstance.SetFormatter(config.LogFormat)
+	if len(config.TimestampFormat) > 0 {
+		loggerInstance.SetTimestampFormat(config.TimestampFormat)
+	}
 	if config.IsUseLogFile == true {
 		loggerInstance.SetLogFile(config.FileConfig)
 	} else {
@@ -160,10 +186,13 @@ func NewLoggerWithConfig(config *Config) *Logger {
 // NewLogger returns a logger instance with default configuration
 func NewLogger() *Logger {
 	config := getDefaultConfig()
-
 	logger := log.New()
-	loggerInstance := &Logger{logger}
+	loggerInstance := &Logger{Logger: logger}
 	loggerInstance.SetFormatter(config.LogFormat)
+	loggerInstance.logFormat = config.LogFormat
+	if len(config.TimestampFormat) > 0 {
+		loggerInstance.SetTimestampFormat(config.TimestampFormat)
+	}
 	if config.IsUseLogFile == true {
 		loggerInstance.SetLogFile(config.FileConfig)
 	} else {

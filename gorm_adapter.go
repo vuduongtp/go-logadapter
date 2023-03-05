@@ -11,11 +11,6 @@ import (
 	"gorm.io/gorm/utils"
 )
 
-// custom constant for gorm logger
-const (
-	DefaultGormSourceField = "source"
-)
-
 // GormLogAdapter model
 type GormLogAdapter struct {
 	*Logger

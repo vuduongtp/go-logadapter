@@ -14,9 +14,10 @@ func main() {
 
 func testCreateInstance() {
 	config := &logadapter.Config{
-		LogLevel:     logadapter.DebugLevel,
-		LogFormat:    logadapter.JSONFormat,
-		IsUseLogFile: true,
+		LogLevel:        logadapter.DebugLevel,
+		LogFormat:       logadapter.JSONFormat,
+		TimestampFormat: time.RFC3339Nano,
+		IsUseLogFile:    true,
 	}
 	logger := logadapter.NewLoggerWithConfig(config)
 	logger.Debug("test")
