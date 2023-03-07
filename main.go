@@ -21,8 +21,17 @@ const (
 
 // custom constants
 const (
-	DefaultTimestampFormat = "2006-01-02T15:04:05.00000Z07:00"
+	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
 	DefaultGormSourceField = "source"
+)
+
+// Key is key context type
+type Key string
+
+// Exported constanst
+const (
+	CorrelationIDKey Key = "X-User-Correlation-Id"
+	RequestIDKey     Key = "X-Request-ID"
 )
 
 // LogFormat log format
@@ -86,6 +95,7 @@ type Logger struct {
 
 // SetFormatter logger formatter
 func (l *Logger) SetFormatter(logFormat LogFormat) {
+	l.logFormat = logFormat
 	switch logFormat {
 	case JSONFormat:
 		l.Logger.SetFormatter(&log.JSONFormatter{TimestampFormat: DefaultTimestampFormat})
@@ -142,7 +152,7 @@ func (l *Logger) SetLevel(level Level) {
 
 func getDefaultFileConfig() *FileConfig {
 	return &FileConfig{
-		Filename:       GetLogFile(),
+		Filename:       getLogFile(),
 		MaxSize:        10,
 		MaxBackups:     3,
 		MaxAge:         30,

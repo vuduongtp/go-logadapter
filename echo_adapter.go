@@ -294,7 +294,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 				"latency_ms": latency.Milliseconds(),
 				"referer":    req.Referer(),
 				"type":       LogTypeAPI,
-				"request_id": GetCorrelationID(ctx),
+				"request_id": getCorrelationID(ctx),
 				"error":      errStr,
 			}
 
@@ -326,7 +326,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 
 	logField := logrus.Fields{
 		"type":       logType,
-		"request_id": GetCorrelationID(c.Request().Context()),
+		"request_id": getCorrelationID(c.Request().Context()),
 	}
 
 	if len(content) > 2 {

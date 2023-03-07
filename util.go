@@ -9,22 +9,13 @@ import (
 	"time"
 )
 
-// Key is key context type
-type Key string
-
-// Exported constanst
-const (
-	CorrelationIDKey Key = "X-User-Correlation-Id"
-	RequestIDKey     Key = "X-Request-ID"
-)
-
 // withCorrelationID sets correlation id to context
 func withCorrelationID(parent context.Context, correlationID string) context.Context {
 	return context.WithValue(parent, CorrelationIDKey, correlationID)
 }
 
-// GetCorrelationID return correlation id
-func GetCorrelationID(ctx context.Context) string {
+// getCorrelationID return correlation id
+func getCorrelationID(ctx context.Context) string {
 	id := ctx.Value(CorrelationIDKey)
 	if id != nil {
 		return id.(string)
@@ -32,8 +23,8 @@ func GetCorrelationID(ctx context.Context) string {
 	return ""
 }
 
-// GetLogFile get file log
-func GetLogFile() string {
+// getLogFile get file log
+func getLogFile() string {
 	path := ""
 	dir, err := os.Getwd()
 	if err != nil {
