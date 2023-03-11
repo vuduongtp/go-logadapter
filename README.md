@@ -7,6 +7,7 @@
 <p align="center">
   <img src="https://user-images.githubusercontent.com/32934289/224491943-30e48110-ea1f-4a95-a396-5f04dd91f963.png" />
 </p>
+
 **go-logadapter provide a flexible and powerful way to handle logging in applications, and can help in debugging, monitoring, and maintaining the application's performance and behavior.**
 
 In Go, the logging package provides a simple logging interface for sending log messages to various outputs, such as the console or a file. However, it can be useful to have more advanced logging features, such as the ability to write logs to multiple destinations, format log messages differently based on severity or context, or filter logs based on certain criteria. To accomplish these more advanced logging features, we can use **go-logadapter**. 
