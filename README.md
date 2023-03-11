@@ -4,7 +4,8 @@
 [![Release](https://img.shields.io/github/v/release/vuduongtp/go-logadapter)](https://github.com/vuduongtp/go-logadapter/releases)
 [![Go Reference](https://pkg.go.dev/badge/github.com/vuduongtp/go-logadapter.svg)](https://pkg.go.dev/github.com/vuduongtp/go-logadapter)
 
-**go-logadapter provide a flexible and powerful way to handle logging in applications, and can help in debugging, monitoring, and maintaining the application's performance and behavior**
+![go-logadapter](https://user-images.githubusercontent.com/32934289/224491943-30e48110-ea1f-4a95-a396-5f04dd91f963.png)
+**go-logadapter provide a flexible and powerful way to handle logging in applications, and can help in debugging, monitoring, and maintaining the application's performance and behavior.**
 
 In Go, the logging package provides a simple logging interface for sending log messages to various outputs, such as the console or a file. However, it can be useful to have more advanced logging features, such as the ability to write logs to multiple destinations, format log messages differently based on severity or context, or filter logs based on certain criteria. To accomplish these more advanced logging features, we can use **go-logadapter**. 
 
@@ -13,7 +14,7 @@ It's a piece of code that sits between the application and the logging package a
 - Writing logs to multiple destinations, such as a file, console.
 - Formatting log messages such as JSON, pretty JSON, text.
 - Filtering logs based on certain criteria, such as log level, module, type, or request_id.
-- Suit specific application needs such as [echo](https://github.com/labstack/echo) , [gorm](https://github.com/go-gorm/gorm)
+- Suit specific application needs such as [echo](https://github.com/labstack/echo), [gorm](https://github.com/go-gorm/gorm)
 - Can help in debugging an application by providing detailed information about the application's behavior, performance, and errors.
 
 ## Requirements
