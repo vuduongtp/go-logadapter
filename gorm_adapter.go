@@ -26,6 +26,8 @@ func NewGormLogAdapter(log *Logger) *GormLogAdapter {
 		SkipErrRecordNotFound: true,
 		Debug:                 true,
 		Logger:                log,
+		SlowThreshold:         time.Second,
+		SourceField:           DefaultGormSourceField,
 	}
 }
 

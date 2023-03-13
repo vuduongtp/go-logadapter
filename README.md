@@ -36,24 +36,53 @@ import "github.com/vuduongtp/go-logadapter"
 ## Basic Example
 View full example [here](https://github.com/vuduongtp/go-logadapter/blob/main/test/test.go)
 ### Create new simple logger
+**Log with JSON format**
 ```go
 logger := logadapter.NewLogger()
 logger.Debug("test")
 ```
 ```
-{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05T20:47:28.369102+07:00"}
-{"level":"debug","msg":"test","time":"2023-03-05T20:47:28.369163+07:00"}
+{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05 20:47:28.369102"}
+{"level":"debug","msg":"test","time":"2023-03-05 20:47:28.369163"}
 ```
 ### Create new logger with config
+**Log with pertty JSON format**
 ```go
 config := &logadapter.Config{
     LogLevel:        logadapter.DebugLevel,
-    LogFormat:       logadapter.JSONFormat,
+    LogFormat:       logadapter.PrettyJSONFormat,
     TimestampFormat: time.RFC3339Nano,
-    IsUseLogFile:    true,
+    IsUseLogFile:    false,
 }
 logger := logadapter.NewLoggerWithConfig(config)
 logger.Debug("test")
+```
+```
+{
+  "level": "info",
+  "msg": "Logger instance has been successfully initialized",
+  "time": "2023-03-13T15:10:57.02729+07:00"
+}
+{
+  "level": "debug",
+  "msg": "test",
+  "time": "2023-03-13T15:10:57.027391+07:00"
+}
+```
+**Log with text format**
+```go
+config := &logadapter.Config{
+    LogLevel:        logadapter.DebugLevel,
+    LogFormat:       logadapter.TextFormat,
+    TimestampFormat: time.RFC3339Nano,
+    IsUseLogFile:    false,
+}
+logger := logadapter.NewLoggerWithConfig(config)
+logger.Debug("test")
+```
+```
+time="2023-03-13T15:12:06.700689+07:00" level=info msg="Logger instance has been successfully initialized"
+time="2023-03-13T15:12:06.700763+07:00" level=debug msg=test
 ```
 ### Set logadapter to gorm logger
 ```go
@@ -65,12 +94,11 @@ config := &logadapter.Config{
 logger := logadapter.NewLoggerWithConfig(config)
 
 // * set log adapter for gorm logging
-gormConfig := new(gorm.Config)
-gormConfig.PrepareStmt = true
-gormLogAdapter := logadapter.NewGormLogAdapter(logger)
-gormLogAdapter.SlowThreshold = time.Second
-gormLogAdapter.SourceField = logadapter.DefaultGormSourceField
-gormConfig.Logger = gormLogAdapter 
+db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+if err != nil {
+    panic("failed to connect database")
+}
+db.Logger := logadapter.NewGormLogAdapter(logger)
 ```
 ### Set logadapter to Echo
 ```go
