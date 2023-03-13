@@ -248,7 +248,9 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			id := c.Request().Header.Get(string(CorrelationIDKey))
 			if id == "" {
 				id = c.Request().Header.Get(string(RequestIDKey))
-				c.Response().Header().Set(string(RequestIDKey), id)
+				if id != "" {
+					c.Response().Header().Set(string(RequestIDKey), id)
+				}
 			} else {
 				c.Response().Header().Set(string(CorrelationIDKey), id)
 			}
@@ -298,11 +300,11 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 				"error":      errStr,
 			}
 
+			b, _ := json.Marshal(trace)
 			if logger, ok := c.Logger().(*EchoLogAdapter); ok {
-				logger.WithFields(trace).Info()
+				logger.Output().Write(b)
 			} else {
-				b, _ := json.Marshal(trace)
-				c.Logger().Info(string(b))
+				c.Logger().Output().Write(b)
 			}
 
 			return err
@@ -311,8 +313,8 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 }
 
 // LogWithEchoContext log content with echo context
-// content[0] : message -> interface{}
-// content[1] : log type -> string
+// content[0] : message -> interface{},
+// content[1] : log type -> string,
 // content[2] : log field -> map[string]interface{}
 func LogWithEchoContext(c echo.Context, content ...interface{}) {
 	var logType string
