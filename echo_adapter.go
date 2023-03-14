@@ -1,6 +1,7 @@
 package logadapter
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"strconv"
@@ -300,11 +301,14 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 				"error":      errStr,
 			}
 
+			var buf bytes.Buffer
 			b, _ := json.Marshal(trace)
+			buf.Write(b)
+			buf.WriteString("\n")
 			if logger, ok := c.Logger().(*EchoLogAdapter); ok {
-				logger.Output().Write(b)
+				logger.Output().Write(buf.Bytes())
 			} else {
-				c.Logger().Output().Write(b)
+				c.Logger().Output().Write(buf.Bytes())
 			}
 
 			return err
