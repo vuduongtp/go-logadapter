@@ -285,6 +285,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			// * log json format
 			latency := stop.Sub(start)
 			trace := map[string]interface{}{
+				"time":       stop.Format(DefaultTimestampFormat),
 				"ip":         c.RealIP(),
 				"user_agent": req.UserAgent(),
 				"host":       req.Host,

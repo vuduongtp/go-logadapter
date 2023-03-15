@@ -5,6 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/vuduongtp/go-logadapter"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -13,45 +14,36 @@ func main() {
 }
 
 func testCreateInstance() {
-	config := &logadapter.Config{
+	logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
 		LogLevel:        logadapter.DebugLevel,
 		LogFormat:       logadapter.JSONFormat,
 		TimestampFormat: time.RFC3339Nano,
 		IsUseLogFile:    true,
-	}
-	logger := logadapter.NewLoggerWithConfig(config)
+		FileConfig: &logadapter.FileConfig{
+			Filename:       "logs",
+			MaxSize:        50,
+			MaxBackups:     10,
+			MaxAge:         30,
+			IsCompress:     false,
+			IsUseLocalTime: false,
+		},
+	})
 	logger.Debug("test")
 }
 
 func testGormAdapter() {
-	config := &logadapter.Config{
-		LogLevel:     logadapter.DebugLevel,
-		LogFormat:    logadapter.JSONFormat,
-		IsUseLogFile: true,
-	}
-	logger := logadapter.NewLoggerWithConfig(config)
-
 	// * set log adapter for gorm logging
-	gormConfig := new(gorm.Config)
-	gormConfig.PrepareStmt = true
-	gormLogAdapter := logadapter.NewGormLogAdapter(logger)
-	gormLogAdapter.SlowThreshold = time.Second
-	gormLogAdapter.SourceField = logadapter.DefaultGormSourceField
-	gormConfig.Logger = gormLogAdapter
-
+	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	if err != nil {
+		panic("failed to connect database")
+	}
+	db.Logger = logadapter.NewGormLogAdapter(logadapter.NewLogger())
 }
 
 func testEchoAdapter() {
-	config := &logadapter.Config{
-		LogLevel:     logadapter.DebugLevel,
-		LogFormat:    logadapter.JSONFormat,
-		IsUseLogFile: true,
-	}
-	logger := logadapter.NewLoggerWithConfig(config)
-
 	e := echo.New()
 	// * set log adapter for echo instance
-	e.Logger = logadapter.NewEchoLogAdapter(logger)
+	e.Logger = logadapter.NewEchoLogAdapter(logadapter.NewLogger())
 
 	// * use log adapter middleware for echo web framework
 	e.Use(logadapter.NewEchoLoggerMiddleware())

@@ -36,7 +36,6 @@ import "github.com/vuduongtp/go-logadapter"
 ## Basic Example
 View full example [here](https://github.com/vuduongtp/go-logadapter/blob/main/test/test.go)
 ### Create new simple logger
-**Log with JSON format**
 ```go
 logger := logadapter.NewLogger()
 logger.Debug("test")
@@ -46,15 +45,36 @@ logger.Debug("test")
 {"level":"debug","msg":"test","time":"2023-03-05 20:47:28.369163"}
 ```
 ### Create new logger with config
+**Log to file**
+```go
+logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
+  LogLevel:        logadapter.DebugLevel,
+  LogFormat:       logadapter.JSONFormat,
+  TimestampFormat: time.RFC3339Nano,
+  IsUseLogFile:    true,
+  FileConfig: &logadapter.FileConfig{
+    Filename:       "logs",
+    MaxSize:        50,
+    MaxBackups:     10,
+    MaxAge:         30,
+    IsCompress:     false,
+    IsUseLocalTime: false,
+  },
+})
+logger.Debug("test")
+```
+```
+{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05 20:47:28.369102"}
+{"level":"debug","msg":"test","time":"2023-03-05 20:47:28.369163"}
+```
 **Log with pertty JSON format**
 ```go
-config := &logadapter.Config{
-    LogLevel:        logadapter.DebugLevel,
-    LogFormat:       logadapter.PrettyJSONFormat,
-    TimestampFormat: time.RFC3339Nano,
-    IsUseLogFile:    false,
-}
-logger := logadapter.NewLoggerWithConfig(config)
+logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
+  LogLevel:        logadapter.DebugLevel,
+  LogFormat:       logadapter.PrettyJSONFormat,
+  TimestampFormat: time.RFC3339Nano,
+  IsUseLogFile:    false,
+})
 logger.Debug("test")
 ```
 ```
@@ -71,13 +91,12 @@ logger.Debug("test")
 ```
 **Log with text format**
 ```go
-config := &logadapter.Config{
-    LogLevel:        logadapter.DebugLevel,
-    LogFormat:       logadapter.TextFormat,
-    TimestampFormat: time.RFC3339Nano,
-    IsUseLogFile:    false,
-}
-logger := logadapter.NewLoggerWithConfig(config)
+logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
+  LogLevel:        logadapter.DebugLevel,
+  LogFormat:       logadapter.TextFormat,
+  TimestampFormat: time.RFC3339Nano,
+  IsUseLogFile:    false,
+})
 logger.Debug("test")
 ```
 ```
@@ -86,42 +105,26 @@ time="2023-03-13T15:12:06.700763+07:00" level=debug msg=test
 ```
 ### Set logadapter to gorm logger
 ```go
-config := &logadapter.Config{
-    LogLevel:     logadapter.DebugLevel,
-    LogFormat:    logadapter.JSONFormat,
-    IsUseLogFile: true,
-}
-logger := logadapter.NewLoggerWithConfig(config)
-
 // * set log adapter for gorm logging
 db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 if err != nil {
-    panic("failed to connect database")
+  panic("failed to connect database")
 }
-db.Logger := logadapter.NewGormLogAdapter(logger)
+db.Logger = logadapter.NewGormLogAdapter(logadapter.NewLogger())
 ```
 ### Set logadapter to Echo
 ```go
-config := &logadapter.Config{
-    LogLevel:     logadapter.DebugLevel,
-    LogFormat:    logadapter.JSONFormat,
-    IsUseLogFile: true,
-}
-logger := logadapter.NewLoggerWithConfig(config)
-
 e := echo.New()
 // * set log adapter for echo instance
-e.Logger = logadapter.NewEchoLogAdapter(logger)
+e.Logger = logadapter.NewEchoLogAdapter(logadapter.NewLogger())
 
-// * use log adapter middleware for echo web framework
+// * use logger middleware for echo web framework
 e.Use(logadapter.NewEchoLoggerMiddleware())
 
 // * log with echo context for log request_id
 echoContext := e.AcquireContext() // example echo context, should be replaced with echo.Request().Context()
 logadapter.LogWithEchoContext(echoContext, "this is message", logadapter.LogTypeDebug, map[string]interface{}{
-    "field_name": "this is log field",
-}) // log message with extend field
-logadapter.LogWithEchoContext(echoContext, "this is message 2", logadapter.LogTypeError) // log message error
-logadapter.LogWithEchoContext(echoContext, "this is message 3")                          // log message debug
+  "field_name": "this is log field",
+})
 ```
 **If you really want to help us, simply Fork the project and apply for Pull Request. Thanks.**
