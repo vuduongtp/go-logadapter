@@ -13,14 +13,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// EchoLogAdapter extend logrus.Logger
-type EchoLogAdapter struct {
+// EchoLogger extend logrus.Logger
+type EchoLogger struct {
 	*Logger
 }
 
-// NewEchoLogAdapter return singleton logger
-func NewEchoLogAdapter(logger *Logger) *EchoLogAdapter {
-	return &EchoLogAdapter{Logger: logger}
+// NewEchoLogger return singleton logger
+func NewEchoLogger() *EchoLogger {
+	return &EchoLogger{Logger: l}
 }
 
 // To logrus.Level
@@ -56,67 +56,67 @@ func toEchoLevel(level logrus.Level) log.Lvl {
 }
 
 // Output return logger io.Writer
-func (l *EchoLogAdapter) Output() io.Writer {
+func (l *EchoLogger) Output() io.Writer {
 	return l.Out
 }
 
 // SetOutput logger io.Writer
-func (l *EchoLogAdapter) SetOutput(w io.Writer) {
+func (l *EchoLogger) SetOutput(w io.Writer) {
 	l.Out = w
 }
 
 // Level return logger level
-func (l *EchoLogAdapter) Level() log.Lvl {
+func (l *EchoLogger) Level() log.Lvl {
 	return toEchoLevel(l.Logger.Level)
 }
 
 // SetLevel logger level
-func (l *EchoLogAdapter) SetLevel(v log.Lvl) {
+func (l *EchoLogger) SetLevel(v log.Lvl) {
 	l.Logger.Level = toLogrusLevel(v)
 }
 
 // SetHeader logger header
 // Managed by Logrus itself
 // This function do nothing
-func (l *EchoLogAdapter) SetHeader(h string) {
+func (l *EchoLogger) SetHeader(h string) {
 	// do nothing
 }
 
 // Formatter return logger formatter
-func (l *EchoLogAdapter) Formatter() logrus.Formatter {
+func (l *EchoLogger) Formatter() logrus.Formatter {
 	return l.Logger.Formatter
 }
 
 // SetFormatter logger formatter
 // Only support logrus formatter
-func (l *EchoLogAdapter) SetFormatter(formatter logrus.Formatter) {
+func (l *EchoLogger) SetFormatter(formatter logrus.Formatter) {
 	l.Logger.Formatter = formatter
 }
 
 // Prefix return logger prefix
 // This function do nothing
-func (l *EchoLogAdapter) Prefix() string {
+func (l *EchoLogger) Prefix() string {
 	return ""
 }
 
 // SetPrefix logger prefix
 // This function do nothing
-func (l *EchoLogAdapter) SetPrefix(p string) {
+func (l *EchoLogger) SetPrefix(p string) {
 	// do nothing
 }
 
 // Print output message of print level
-func (l *EchoLogAdapter) Print(i ...interface{}) {
+func (l *EchoLogger) Print(i ...interface{}) {
 	l.Logger.Print(i...)
 }
 
 // Printf output format message of print level
-func (l *EchoLogAdapter) Printf(format string, args ...interface{}) {
+func (l *EchoLogger) Printf(format string, args ...interface{}) {
 	l.Logger.Printf(format, args...)
 }
 
 // Printj output json of print level
-func (l *EchoLogAdapter) Printj(j log.JSON) {
+func (l *EchoLogger) Printj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -125,17 +125,17 @@ func (l *EchoLogAdapter) Printj(j log.JSON) {
 }
 
 // Debug output message of debug level
-func (l *EchoLogAdapter) Debug(i ...interface{}) {
+func (l *EchoLogger) Debug(i ...interface{}) {
 	l.Logger.Debug(i...)
 }
 
 // Debugf output format message of debug level
-func (l *EchoLogAdapter) Debugf(format string, args ...interface{}) {
+func (l *EchoLogger) Debugf(format string, args ...interface{}) {
 	l.Logger.Debugf(format, args...)
 }
 
 // Debugj output message of debug level
-func (l *EchoLogAdapter) Debugj(j log.JSON) {
+func (l *EchoLogger) Debugj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -144,17 +144,17 @@ func (l *EchoLogAdapter) Debugj(j log.JSON) {
 }
 
 // Info output message of info level
-func (l *EchoLogAdapter) Info(i ...interface{}) {
+func (l *EchoLogger) Info(i ...interface{}) {
 	l.Logger.Info(i...)
 }
 
 // Infof output format message of info level
-func (l *EchoLogAdapter) Infof(format string, args ...interface{}) {
+func (l *EchoLogger) Infof(format string, args ...interface{}) {
 	l.Logger.Infof(format, args...)
 }
 
 // Infoj output json of info level
-func (l *EchoLogAdapter) Infoj(j log.JSON) {
+func (l *EchoLogger) Infoj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -163,17 +163,17 @@ func (l *EchoLogAdapter) Infoj(j log.JSON) {
 }
 
 // Warn output message of warn level
-func (l *EchoLogAdapter) Warn(i ...interface{}) {
+func (l *EchoLogger) Warn(i ...interface{}) {
 	l.Logger.Warn(i...)
 }
 
 // Warnf output format message of warn level
-func (l *EchoLogAdapter) Warnf(format string, args ...interface{}) {
+func (l *EchoLogger) Warnf(format string, args ...interface{}) {
 	l.Logger.Warnf(format, args...)
 }
 
 // Warnj output json of warn level
-func (l *EchoLogAdapter) Warnj(j log.JSON) {
+func (l *EchoLogger) Warnj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -182,17 +182,17 @@ func (l *EchoLogAdapter) Warnj(j log.JSON) {
 }
 
 // Error output message of error level
-func (l *EchoLogAdapter) Error(i ...interface{}) {
+func (l *EchoLogger) Error(i ...interface{}) {
 	l.Logger.Error(i...)
 }
 
 // Errorf output format message of error level
-func (l *EchoLogAdapter) Errorf(format string, args ...interface{}) {
+func (l *EchoLogger) Errorf(format string, args ...interface{}) {
 	l.Logger.Errorf(format, args...)
 }
 
 // Errorj output json of error level
-func (l *EchoLogAdapter) Errorj(j log.JSON) {
+func (l *EchoLogger) Errorj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -201,17 +201,17 @@ func (l *EchoLogAdapter) Errorj(j log.JSON) {
 }
 
 // Fatal output message of fatal level
-func (l *EchoLogAdapter) Fatal(i ...interface{}) {
+func (l *EchoLogger) Fatal(i ...interface{}) {
 	l.Logger.Fatal(i...)
 }
 
 // Fatalf output format message of fatal level
-func (l *EchoLogAdapter) Fatalf(format string, args ...interface{}) {
+func (l *EchoLogger) Fatalf(format string, args ...interface{}) {
 	l.Logger.Fatalf(format, args...)
 }
 
 // Fatalj output json of fatal level
-func (l *EchoLogAdapter) Fatalj(j log.JSON) {
+func (l *EchoLogger) Fatalj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -220,17 +220,17 @@ func (l *EchoLogAdapter) Fatalj(j log.JSON) {
 }
 
 // Panic output message of panic level
-func (l *EchoLogAdapter) Panic(i ...interface{}) {
+func (l *EchoLogger) Panic(i ...interface{}) {
 	l.Logger.Panic(i...)
 }
 
 // Panicf output format message of panic level
-func (l *EchoLogAdapter) Panicf(format string, args ...interface{}) {
+func (l *EchoLogger) Panicf(format string, args ...interface{}) {
 	l.Logger.Panicf(format, args...)
 }
 
 // Panicj output json of panic level
-func (l *EchoLogAdapter) Panicj(j log.JSON) {
+func (l *EchoLogger) Panicj(j log.JSON) {
 	b, err := json.Marshal(j)
 	if err != nil {
 		panic(err)
@@ -285,7 +285,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			// * log json format
 			latency := stop.Sub(start)
 			trace := map[string]interface{}{
-				"time":       stop.Format(DefaultTimestampFormat),
+				"time":       stop.Format(l.timestampFormat),
 				"ip":         c.RealIP(),
 				"user_agent": req.UserAgent(),
 				"host":       req.Host,
@@ -306,7 +306,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			b, _ := json.Marshal(trace)
 			buf.Write(b)
 			buf.WriteString("\n")
-			if logger, ok := c.Logger().(*EchoLogAdapter); ok {
+			if logger, ok := c.Logger().(*EchoLogger); ok {
 				logger.Output().Write(buf.Bytes())
 			} else {
 				c.Logger().Output().Write(buf.Bytes())
@@ -346,7 +346,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 
 	switch logType {
 	case LogTypeAPI:
-		if logger, ok := c.Logger().(*EchoLogAdapter); ok {
+		if logger, ok := c.Logger().(*EchoLogger); ok {
 			logger.WithFields(logField).Info(content[0])
 		} else {
 			if len(content) > 2 {
@@ -357,7 +357,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 			}
 		}
 	case LogTypeError:
-		if logger, ok := c.Logger().(*EchoLogAdapter); ok {
+		if logger, ok := c.Logger().(*EchoLogger); ok {
 			logger.WithFields(logField).Error(content[0])
 		} else {
 			if len(content) > 2 {
@@ -368,7 +368,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 			}
 		}
 	default:
-		if logger, ok := c.Logger().(*EchoLogAdapter); ok {
+		if logger, ok := c.Logger().(*EchoLogger); ok {
 			logger.WithFields(logField).Debug(content[0])
 		} else {
 			if len(content) > 2 {

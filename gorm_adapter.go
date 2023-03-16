@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm/utils"
 )
 
-// GormLogAdapter model
-type GormLogAdapter struct {
+// GormLogger model
+type GormLogger struct {
 	*Logger
 	SlowThreshold         time.Duration
 	SourceField           string
@@ -20,39 +20,39 @@ type GormLogAdapter struct {
 	Debug                 bool
 }
 
-// NewGormLogAdapter gorm logrus GormLogAdapter
-func NewGormLogAdapter(log *Logger) *GormLogAdapter {
-	return &GormLogAdapter{
+// NewGormLogger new gorm logger
+func NewGormLogger() *GormLogger {
+	return &GormLogger{
 		SkipErrRecordNotFound: true,
 		Debug:                 true,
-		Logger:                log,
+		Logger:                l,
 		SlowThreshold:         time.Second,
 		SourceField:           DefaultGormSourceField,
 	}
 }
 
-// LogMode function
-func (l *GormLogAdapter) LogMode(gormlogger.LogLevel) gormlogger.Interface {
+// LogMode get log mode
+func (l *GormLogger) LogMode(gormlogger.LogLevel) gormlogger.Interface {
 	return l
 }
 
-// Info function
-func (l *GormLogAdapter) Info(ctx context.Context, s string, args ...interface{}) {
+// Info log infor
+func (l *GormLogger) Info(ctx context.Context, s string, args ...interface{}) {
 	l.Logger.WithContext(ctx).Infof(s, args)
 }
 
-// Warn function
-func (l *GormLogAdapter) Warn(ctx context.Context, s string, args ...interface{}) {
+// Warn log warn
+func (l *GormLogger) Warn(ctx context.Context, s string, args ...interface{}) {
 	l.Logger.WithContext(ctx).Warnf(s, args)
 }
 
-// Error function
-func (l *GormLogAdapter) Error(ctx context.Context, s string, args ...interface{}) {
+// Error log error
+func (l *GormLogger) Error(ctx context.Context, s string, args ...interface{}) {
 	l.Logger.WithContext(ctx).Errorf(s, args)
 }
 
-// Trace function
-func (l *GormLogAdapter) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+// Trace log sql trace
+func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	elapsed := time.Since(begin)
 	sql, row := fc()
 	fields := logrus.Fields{}

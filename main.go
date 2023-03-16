@@ -90,12 +90,21 @@ type FileConfig struct {
 // Logger instance
 type Logger struct {
 	*log.Logger
-	logFormat LogFormat
+	logFormat       LogFormat
+	timestampFormat string
 }
 
-// SetFormatter logger formatter
+var l *Logger
+
+func init() {
+	l = New()
+}
+
+// SetFormatter set logger formatter
+func SetFormatter(logFormat LogFormat) { l.SetFormatter(logFormat) }
+
+// SetFormatter set logger formatter
 func (l *Logger) SetFormatter(logFormat LogFormat) {
-	l.logFormat = logFormat
 	switch logFormat {
 	case JSONFormat:
 		l.Logger.SetFormatter(&log.JSONFormatter{TimestampFormat: DefaultTimestampFormat})
@@ -106,7 +115,15 @@ func (l *Logger) SetFormatter(logFormat LogFormat) {
 	default:
 		l.Logger.SetFormatter(&log.TextFormatter{TimestampFormat: DefaultTimestampFormat})
 	}
+
+	l.logFormat = logFormat
 }
+
+// GetFormatter get logger formatter
+func GetFormatter() LogFormat { return l.logFormat }
+
+// SetTimestampFormat set timestamp format
+func SetTimestampFormat(timestampFormat string) { l.SetTimestampFormat(timestampFormat) }
 
 // SetTimestampFormat set timestamp format
 func (l *Logger) SetTimestampFormat(timestampFormat string) {
@@ -120,7 +137,15 @@ func (l *Logger) SetTimestampFormat(timestampFormat string) {
 	default:
 		l.Logger.SetFormatter(&log.TextFormatter{TimestampFormat: timestampFormat})
 	}
+
+	l.timestampFormat = timestampFormat
 }
+
+// GetTimestampFormat get timestamp format
+func GetTimestampFormat() string { return l.timestampFormat }
+
+// SetLogFile set log file
+func SetLogFile(fileConfig *FileConfig) { l.SetLogFile(fileConfig) }
 
 // SetLogFile set log file
 func (l *Logger) SetLogFile(fileConfig *FileConfig) {
@@ -141,14 +166,26 @@ func (l *Logger) SetLogFile(fileConfig *FileConfig) {
 }
 
 // SetLogConsole set log console
+func SetLogConsole() { l.SetLogConsole() }
+
+// SetLogConsole set log console
 func (l *Logger) SetLogConsole() {
 	l.SetOutput(os.Stdout)
 }
 
 // SetLevel set log level
+func SetLevel(level Level) { l.SetLevel(level) }
+
+// SetLevel set log level
 func (l *Logger) SetLevel(level Level) {
 	l.Logger.SetLevel(log.Level(level))
 }
+
+// SetLogger set logger instance
+func SetLogger(logger *Logger) { l = logger }
+
+// GetLogger set logger instance
+func GetLogger() *Logger { return l }
 
 func getDefaultFileConfig() *FileConfig {
 	return &FileConfig{
@@ -170,46 +207,79 @@ func getDefaultConfig() *Config {
 	}
 }
 
-// NewLoggerWithConfig returns a logger instance with custom configuration
-func NewLoggerWithConfig(config *Config) *Logger {
+// NewWithConfig returns a logger instance with custom configuration
+func NewWithConfig(config *Config) *Logger {
 	if config == nil {
 		config = getDefaultConfig()
 	}
 	logger := log.New()
-	loggerInstance := &Logger{Logger: logger}
-	loggerInstance.logFormat = config.LogFormat
-	loggerInstance.SetFormatter(config.LogFormat)
+	l := &Logger{Logger: logger}
+	l.logFormat = config.LogFormat
+	l.SetFormatter(config.LogFormat)
 	if len(config.TimestampFormat) > 0 {
-		loggerInstance.SetTimestampFormat(config.TimestampFormat)
+		l.SetTimestampFormat(config.TimestampFormat)
 	}
 	if config.IsUseLogFile == true {
-		loggerInstance.SetLogFile(config.FileConfig)
+		l.SetLogFile(config.FileConfig)
 	} else {
-		loggerInstance.SetLogConsole()
+		l.SetLogConsole()
 	}
-	loggerInstance.SetLevel(config.LogLevel)
-	loggerInstance.Info("Logger instance has been successfully initialized")
+	l.SetLevel(config.LogLevel)
 
-	return loggerInstance
+	return l
 }
 
-// NewLogger returns a logger instance with default configuration
-func NewLogger() *Logger {
+// New returns a logger instance with default configuration
+func New() *Logger {
 	config := getDefaultConfig()
 	logger := log.New()
-	loggerInstance := &Logger{Logger: logger}
-	loggerInstance.SetFormatter(config.LogFormat)
-	loggerInstance.logFormat = config.LogFormat
+	l := &Logger{Logger: logger}
+	l.SetFormatter(config.LogFormat)
+	l.logFormat = config.LogFormat
 	if len(config.TimestampFormat) > 0 {
-		loggerInstance.SetTimestampFormat(config.TimestampFormat)
+		l.SetTimestampFormat(config.TimestampFormat)
 	}
 	if config.IsUseLogFile == true {
-		loggerInstance.SetLogFile(config.FileConfig)
+		l.SetLogFile(config.FileConfig)
 	} else {
-		loggerInstance.SetLogConsole()
+		l.SetLogConsole()
 	}
-	loggerInstance.SetLevel(config.LogLevel)
-	loggerInstance.Info("Logger instance has been successfully initialized")
+	l.SetLevel(config.LogLevel)
 
-	return loggerInstance
+	return l
+}
+
+// Trace log with trace level
+func Trace(args ...interface{}) {
+	l.Trace(args...)
+}
+
+// Debug log with debug level
+func Debug(args ...interface{}) {
+	l.Debug(args...)
+}
+
+// Info log with info level
+func Info(args ...interface{}) {
+	l.Info(args...)
+}
+
+// Warn log with warn level
+func Warn(args ...interface{}) {
+	l.Warn(args...)
+}
+
+// Error log with error level
+func Error(args ...interface{}) {
+	l.Error(args...)
+}
+
+// Fatal log with fatal level
+func Fatal(args ...interface{}) {
+	l.Fatal(args...)
+}
+
+// Panic log with panic level
+func Panic(args ...interface{}) {
+	l.Panic(args...)
 }

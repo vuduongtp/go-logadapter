@@ -10,11 +10,23 @@ import (
 )
 
 func main() {
-	testCreateInstance()
+	testSimpleLog()
+	testNewWithConfig()
+	testSetPrettyJSONFormat()
+	testSetTextFormat()
+	testSetTimestampFormat()
+	testSetLogConsole()
+	testSetLogFile()
 }
 
-func testCreateInstance() {
-	logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
+func testSimpleLog() {
+	logadapter.Debug("debug message")
+	logadapter.Error("error message")
+	logadapter.Warn("warn message")
+}
+
+func testNewWithConfig() {
+	logadapter.SetLogger(logadapter.NewWithConfig(&logadapter.Config{
 		LogLevel:        logadapter.DebugLevel,
 		LogFormat:       logadapter.JSONFormat,
 		TimestampFormat: time.RFC3339Nano,
@@ -27,8 +39,40 @@ func testCreateInstance() {
 			IsCompress:     false,
 			IsUseLocalTime: false,
 		},
+	}))
+	logadapter.Debug("test")
+}
+
+func testSetPrettyJSONFormat() {
+	logadapter.SetFormatter(logadapter.PrettyJSONFormat)
+	logadapter.Debug("message")
+}
+
+func testSetTextFormat() {
+	logadapter.SetFormatter(logadapter.TextFormat)
+	logadapter.Debug("message")
+}
+
+func testSetTimestampFormat() {
+	logadapter.SetTimestampFormat(time.RFC1123)
+	logadapter.Debug("message")
+}
+
+func testSetLogConsole() {
+	logadapter.SetLogConsole()
+	logadapter.Debug("message")
+}
+
+func testSetLogFile() {
+	logadapter.SetLogFile(&logadapter.FileConfig{
+		Filename:       "logs",
+		MaxSize:        50,
+		MaxBackups:     10,
+		MaxAge:         30,
+		IsCompress:     false,
+		IsUseLocalTime: false,
 	})
-	logger.Debug("test")
+	logadapter.Debug("message")
 }
 
 func testGormAdapter() {
@@ -37,13 +81,13 @@ func testGormAdapter() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.Logger = logadapter.NewGormLogAdapter(logadapter.NewLogger())
+	db.Logger = logadapter.NewGormLogger()
 }
 
 func testEchoAdapter() {
 	e := echo.New()
 	// * set log adapter for echo instance
-	e.Logger = logadapter.NewEchoLogAdapter(logadapter.NewLogger())
+	e.Logger = logadapter.NewEchoLogger()
 
 	// * use log adapter middleware for echo web framework
 	e.Use(logadapter.NewEchoLoggerMiddleware())

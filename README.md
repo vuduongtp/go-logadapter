@@ -29,102 +29,86 @@ It's a piece of code that sits between the application and the logging package a
 ```
 $ go get -u github.com/vuduongtp/go-logadapter
 ```
-## Import to go
+## Import
 ```go
 import "github.com/vuduongtp/go-logadapter"
 ```
 ## Basic Example
 View full example [here](https://github.com/vuduongtp/go-logadapter/blob/main/test/test.go)
-### Create new simple logger
+### Simple example
 ```go
-logger := logadapter.NewLogger()
-logger.Debug("test")
+logadapter.Debug("debug message")
+logadapter.Error("error message")
+logadapter.Warn("warn message")
 ```
 ```
-{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05 20:47:28.369102"}
-{"level":"debug","msg":"test","time":"2023-03-05 20:47:28.369163"}
+{"level":"debug","msg":"debug message","time":"2023-03-17 00:10:17.18915"}
+{"level":"error","msg":"error message","time":"2023-03-17 00:10:17.18924"}
+{"level":"warning","msg":"warn message","time":"2023-03-17 00:10:17.18924"}
 ```
 ### Create new logger with config
-**Log to file**
 ```go
-logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
-  LogLevel:        logadapter.DebugLevel,
-  LogFormat:       logadapter.JSONFormat,
-  TimestampFormat: time.RFC3339Nano,
-  IsUseLogFile:    true,
-  FileConfig: &logadapter.FileConfig{
-    Filename:       "logs",
-    MaxSize:        50,
-    MaxBackups:     10,
-    MaxAge:         30,
-    IsCompress:     false,
-    IsUseLocalTime: false,
-  },
-})
-logger.Debug("test")
+logadapter.SetLogger(logadapter.NewWithConfig(&logadapter.Config{
+LogLevel:        logadapter.DebugLevel,
+LogFormat:       logadapter.JSONFormat,
+TimestampFormat: time.RFC3339Nano,
+IsUseLogFile:    true,
+FileConfig: &logadapter.FileConfig{
+  Filename:       "logs",
+  MaxSize:        50,
+  MaxBackups:     10,
+  MaxAge:         30,
+  IsCompress:     false,
+  IsUseLocalTime: false,
+},
+}))
+logadapter.Debug("test")
 ```
 ```
-{"level":"info","msg":"Logger instance has been successfully initialized","time":"2023-03-05 20:47:28.369102"}
-{"level":"debug","msg":"test","time":"2023-03-05 20:47:28.369163"}
+{"level":"debug","msg":"test","time":"2023-03-17T00:14:56.763181+07:00"}
 ```
 **Log with pertty JSON format**
 ```go
-logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
-  LogLevel:        logadapter.DebugLevel,
-  LogFormat:       logadapter.PrettyJSONFormat,
-  TimestampFormat: time.RFC3339Nano,
-  IsUseLogFile:    false,
-})
-logger.Debug("test")
+logadapter.SetFormatter(logadapter.PrettyJSONFormat)
+logadapter.Debug("message")
 ```
 ```
-{
-  "level": "info",
-  "msg": "Logger instance has been successfully initialized",
-  "time": "2023-03-13T15:10:57.02729+07:00"
-}
 {
   "level": "debug",
-  "msg": "test",
-  "time": "2023-03-13T15:10:57.027391+07:00"
+  "msg": "message",
+  "time": "2023-03-17 00:03:07.14439"
 }
 ```
 **Log with text format**
 ```go
-logger := logadapter.NewLoggerWithConfig(&logadapter.Config{
-  LogLevel:        logadapter.DebugLevel,
-  LogFormat:       logadapter.TextFormat,
-  TimestampFormat: time.RFC3339Nano,
-  IsUseLogFile:    false,
-})
-logger.Debug("test")
+logadapter.SetFormatter(logadapter.TextFormat)
+logadapter.Debug("message")
 ```
 ```
-time="2023-03-13T15:12:06.700689+07:00" level=info msg="Logger instance has been successfully initialized"
-time="2023-03-13T15:12:06.700763+07:00" level=debug msg=test
+time="2023-03-17 00:03:53.74972" level=debug msg=message
 ```
-### Set logadapter to gorm logger
+### Set gorm logger
 ```go
 // * set log adapter for gorm logging
 db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 if err != nil {
   panic("failed to connect database")
 }
-db.Logger = logadapter.NewGormLogAdapter(logadapter.NewLogger())
+db.Logger = logadapter.NewGormLogger()
 ```
-### Set logadapter to Echo
+### Set echo logger
 ```go
 e := echo.New()
 // * set log adapter for echo instance
-e.Logger = logadapter.NewEchoLogAdapter(logadapter.NewLogger())
+e.Logger = logadapter.NewEchoLogger()
 
-// * use logger middleware for echo web framework
+// * use log adapter middleware for echo web framework
 e.Use(logadapter.NewEchoLoggerMiddleware())
 
 // * log with echo context for log request_id
 echoContext := e.AcquireContext() // example echo context, should be replaced with echo.Request().Context()
 logadapter.LogWithEchoContext(echoContext, "this is message", logadapter.LogTypeDebug, map[string]interface{}{
   "field_name": "this is log field",
-})
+}) // log message with extend field
 ```
 **If you really want to help us, simply Fork the project and apply for Pull Request. Thanks.**
