@@ -64,14 +64,7 @@ func testSetLogConsole() {
 }
 
 func testSetLogFile() {
-	logadapter.SetLogFile(&logadapter.FileConfig{
-		Filename:       "logs",
-		MaxSize:        50,
-		MaxBackups:     10,
-		MaxAge:         30,
-		IsCompress:     false,
-		IsUseLocalTime: false,
-	})
+	logadapter.SetLogFile()
 	logadapter.Debug("message")
 }
 

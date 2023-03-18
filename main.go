@@ -144,14 +144,30 @@ func (l *Logger) SetTimestampFormat(timestampFormat string) {
 // GetTimestampFormat get timestamp format
 func GetTimestampFormat() string { return l.timestampFormat }
 
-// SetLogFile set log file
-func SetLogFile(fileConfig *FileConfig) { l.SetLogFile(fileConfig) }
+// SetLogFile set log file, log file will be storaged in logs folder
+func SetLogFile() { l.SetLogFile() }
 
-// SetLogFile set log file
-func (l *Logger) SetLogFile(fileConfig *FileConfig) {
+// SetLogFileWithConfig set log file with file config
+func (l *Logger) SetLogFileWithConfig(fileConfig *FileConfig) {
 	if fileConfig == nil {
 		fileConfig = getDefaultFileConfig()
 	}
+
+	var lumber = &lumberjack.Logger{
+		Filename:   fileConfig.Filename,
+		MaxSize:    fileConfig.MaxSize,
+		MaxBackups: fileConfig.MaxBackups,
+		MaxAge:     fileConfig.MaxAge,
+		Compress:   fileConfig.IsCompress,
+		LocalTime:  fileConfig.IsUseLocalTime,
+	}
+	writer := io.MultiWriter(os.Stdout, lumber)
+	l.Logger.SetOutput(writer)
+}
+
+// SetLogFile set log file, log file will be storaged in logs folder
+func (l *Logger) SetLogFile() {
+	fileConfig := getDefaultFileConfig()
 
 	var lumber = &lumberjack.Logger{
 		Filename:   fileConfig.Filename,
@@ -220,7 +236,7 @@ func NewWithConfig(config *Config) *Logger {
 		l.SetTimestampFormat(config.TimestampFormat)
 	}
 	if config.IsUseLogFile == true {
-		l.SetLogFile(config.FileConfig)
+		l.SetLogFileWithConfig(config.FileConfig)
 	} else {
 		l.SetLogConsole()
 	}
@@ -240,7 +256,7 @@ func New() *Logger {
 		l.SetTimestampFormat(config.TimestampFormat)
 	}
 	if config.IsUseLogFile == true {
-		l.SetLogFile(config.FileConfig)
+		l.SetLogFileWithConfig(config.FileConfig)
 	} else {
 		l.SetLogConsole()
 	}
