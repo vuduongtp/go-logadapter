@@ -16,7 +16,7 @@ It's a piece of code that sits between the application and the logging package a
 ## Advantages of go-logadapter
 - Writing logs to multiple destinations, such as a file, console.
 - Formatting log messages such as JSON, pretty JSON, text.
-- Filtering logs based on certain criteria, such as log level, module, type, or request_id.
+- Filtering logs based on certain criteria, such as log level, module, type, or request_id, correlation_id.
 - Suit specific application needs such as [echo](https://github.com/labstack/echo), [gorm](https://github.com/go-gorm/gorm)
 - Can help in debugging an application by providing detailed information about the application's behavior, performance, and errors.
 
@@ -42,9 +42,9 @@ logadapter.Error("error message")
 logadapter.Warn("warn message")
 ```
 ```
-{"level":"debug","msg":"debug message","time":"2023-03-17 00:10:17.18915"}
-{"level":"error","msg":"error message","time":"2023-03-17 00:10:17.18924"}
-{"level":"warning","msg":"warn message","time":"2023-03-17 00:10:17.18924"}
+{"level":"debug","msg":"debug message","time":"2023-06-22 21:27:08.97942"}
+{"level":"error","msg":"error message","source":"/go-logadpater:25","time":"2023-06-22 21:27:08.97951"}
+{"level":"warning","msg":"warn message","source":"/go-logadpater:25","time":"2023-06-22 21:27:08.97952"}
 ```
 ### Create new logger with config
 ```go
@@ -87,28 +87,80 @@ logadapter.Debug("message")
 ```
 time="2023-03-17 00:03:53.74972" level=debug msg=message
 ```
+**Add custome log field**
+```go
+ctx := context.Background()
+ctx = logadapter.SetCustomLogField(ctx, "test", "test")
+logadapter.InfoWithContext(ctx, "This is message 1")
+
+logadapter.RemoveLogKey("test") // remove this key from log messages
+logadapter.InfoWithContext(ctx, "This is message 2")
+```
+```
+{"level":"info","test":"test","msg":"This is message 1","time":"2023-06-21 17:18:14.49578"}
+{"level":"info","msg":"This is message 2","time":"2023-06-21 17:18:14.49586"}
+```
 ### Set gorm logger
 ```go
-// * set log adapter for gorm logging
+isDebug := true
+// set log adapter for gorm logging
 db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 if err != nil {
   panic("failed to connect database")
 }
-db.Logger = logadapter.NewGormLogger()
+
+if isDebug {
+  db.Logger = logadapter.NewGormLogger().LogMode(logger.Info)
+} else {
+  db.Logger = logadapter.NewGormLogger().LogMode(logger.Silent)
+}
+
+// set one more log key
+ctx := context.Background()
+ctx = logadapter.SetCustomLogField(ctx, "database_name", "test")
+
+type User interface{}
+user := new(User)
+db.WithContext(ctx).First(user)
+```
+```
+{"level":"debug","database_name":"test","msg":"","time":"2023-06-21 16:53:53.14278","row":1,"query":"SELECT * FROM users ORDER BY id LIMIT 1","latency":"63.995042ms","latency_ms":63,"type":"sql"}
 ```
 ### Set echo logger
 ```go
+isDebug := true
 e := echo.New()
-// * set log adapter for echo instance
+// set log adapter for echo instance
 e.Logger = logadapter.NewEchoLogger()
+if isDebug {
+  e.Logger.SetLevel(log.DEBUG)
+} else {
+  e.Logger.SetLevel(log.ERROR)
+}
 
-// * use log adapter middleware for echo web framework
+// use log adapter middleware for echo web framework
 e.Use(logadapter.NewEchoLoggerMiddleware())
 
-// * log with echo context for log request_id
-echoContext := e.AcquireContext() // example echo context, should be replaced with echo.Request().Context()
-logadapter.LogWithEchoContext(echoContext, "this is message", logadapter.LogTypeDebug, map[string]interface{}{
-  "field_name": "this is log field",
-}) // log message with extend field
+e.GET("/", func(c echo.Context) error {
+  logadapter.InfoWithContext(c.Request().Context(), "Message: ", "Hello, World!")
+  return c.String(http.StatusOK, "Hello, World!")
+})
+e.Logger.Fatal(e.Start(":1323"))
+```
+```
+   ____    __
+  / __/___/ /  ___
+ / _// __/ _ \/ _ \
+/___/\__/_//_/\___/ v4.10.2
+High performance, minimalist Go web framework
+https://echo.labstack.com
+____________________________________O/_______
+                  O\
+⇨ http server started on [::]:1323
+
+-> go to http://localhost:1323/
+
+{"correlation_id":"181e60c9d7b144a7a3960852b17efa45","level":"info","msg":"Message: Hello, World!","request_id":"ef4a720b-8af2-45b0-bf0b-4bdcb2424bd9","time":"2023-06-21 17:03:01.92469"}
+{"byte_in":0,"byte_out":13,"correlation_id":"181e60c9d7b144a7a3960852b17efa45","host":"localhost:1323","ip":"127.0.0.1","latency":"427.875µs","latency_ms":0,"level":"info","method":"GET","msg":"","referer":"","request_id":"ef4a720b-8af2-45b0-bf0b-4bdcb2424bd9","status":200,"time":"2023-06-21 17:03:01.92513","type":"api","uri":"/","url":"/","user_agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/112.0"}
 ```
 **If you really want to help us, simply Fork the project and apply for Pull Request. Thanks.**

@@ -1,10 +1,10 @@
 package logadapter
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -238,6 +238,31 @@ func (l *EchoLogger) Panicj(j log.JSON) {
 	l.Logger.Panicln(string(b))
 }
 
+func setEchoContext(c echo.Context) {
+	var correlationID, requestID, userInfor string
+	ctx := c.Request().Context()
+	correlationID = c.Request().Header.Get(string(CorrelationIDHeaderKey))
+	if correlationID == "" {
+		correlationID = generateCorrelationID()
+	}
+	ctx = setContextKeyValue(ctx, string(CorrelationIDLogKey), correlationID)
+
+	requestID = c.Request().Header.Get(string(RequestIDHeaderKey))
+	if requestID == "" {
+		requestID = uuid.NewString()
+	}
+	ctx = setContextKeyValue(ctx, string(RequestIDLogKey), requestID)
+
+	userInfor = c.Request().Header.Get(string(UserInfoHeaderKey))
+	if userInfor != "" {
+		ctx = setContextKeyValue(ctx, string(UserInfoLogKey), userInfor)
+	}
+
+	c.SetRequest(c.Request().WithContext(ctx))
+	c.Response().Header().Set(string(CorrelationIDHeaderKey), correlationID)
+	c.Response().Header().Set(string(RequestIDHeaderKey), requestID)
+}
+
 // NewEchoLoggerMiddleware returns a middleware that logs HTTP requests.
 func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -245,26 +270,7 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			req := c.Request()
 			res := c.Response()
 
-			// * set request_id
-			id := c.Request().Header.Get(string(CorrelationIDKey))
-			if id == "" {
-				id = c.Request().Header.Get(string(RequestIDKey))
-				if id != "" {
-					c.Response().Header().Set(string(RequestIDKey), id)
-				}
-			} else {
-				c.Response().Header().Set(string(CorrelationIDKey), id)
-			}
-			if id == "" {
-				id = uuid.NewString()
-				c.Request().Header.Set(string(CorrelationIDKey), id)
-				c.Response().Header().Set(string(CorrelationIDKey), id)
-			}
-
-			// * set request_id to request context
-			ctx := withCorrelationID(c.Request().Context(), id)
-			request := c.Request().WithContext(ctx)
-			c.SetRequest(request)
+			setEchoContext(c)
 
 			start := time.Now()
 			var err error
@@ -285,12 +291,12 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 			// * log json format
 			latency := stop.Sub(start)
 			trace := map[string]interface{}{
-				"time":       stop.Format(l.timestampFormat),
 				"ip":         c.RealIP(),
 				"user_agent": req.UserAgent(),
 				"host":       req.Host,
 				"method":     req.Method,
-				"url":        req.RequestURI,
+				"url":        req.URL.Path,
+				"uri":        req.RequestURI,
 				"status":     res.Status,
 				"byte_in":    reqSize,
 				"byte_out":   res.Size,
@@ -298,18 +304,25 @@ func NewEchoLoggerMiddleware() echo.MiddlewareFunc {
 				"latency_ms": latency.Milliseconds(),
 				"referer":    req.Referer(),
 				"type":       LogTypeAPI,
-				"request_id": getCorrelationID(ctx),
-				"error":      errStr,
 			}
 
-			var buf bytes.Buffer
-			b, _ := json.Marshal(trace)
-			buf.Write(b)
-			buf.WriteString("\n")
+			if !strings.EqualFold(errStr, "") {
+				trace["error"] = errStr
+			}
+
+			fields := mergeLogFields(trace, GetLogFieldFromContext(c.Request().Context()))
 			if logger, ok := c.Logger().(*EchoLogger); ok {
-				logger.Output().Write(buf.Bytes())
+				if !strings.EqualFold(errStr, "") {
+					logger.WithFields(fields).Error()
+				} else {
+					logger.WithFields(fields).Info()
+				}
 			} else {
-				c.Logger().Output().Write(buf.Bytes())
+				if !strings.EqualFold(errStr, "") {
+					c.Logger().Errorj(fields)
+				} else {
+					c.Logger().Infoj(fields)
+				}
 			}
 
 			return err
@@ -331,49 +344,64 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 		}
 	}
 
-	logField := logrus.Fields{
-		"type":       logType,
-		"request_id": getCorrelationID(c.Request().Context()),
-	}
+	logFields := mergeLogFields(GetLogFieldFromContext(c.Request().Context()), map[string]interface{}{"type": logType})
 
 	if len(content) > 2 {
 		if maps, ok := content[2].(map[string]interface{}); ok {
-			for key, value := range maps {
-				logField[key] = value
-			}
+			logFields = mergeLogFields(logFields, maps)
 		}
 	}
 
 	switch logType {
 	case LogTypeAPI:
 		if logger, ok := c.Logger().(*EchoLogger); ok {
-			logger.WithFields(logField).Info(content[0])
+			logger.WithFields(logFields).Info(content[0])
 		} else {
 			if len(content) > 2 {
-				b, _ := json.Marshal(content[2])
-				c.Logger().Info(content[0], ",", string(b))
+				c.Logger().Info(content[0], content[2])
 			} else {
 				c.Logger().Info(content[0])
 			}
 		}
 	case LogTypeError:
+		source := map[string]interface{}{DefaultSourceField: getCaller()}
 		if logger, ok := c.Logger().(*EchoLogger); ok {
-			logger.WithFields(logField).Error(content[0])
+			logger.WithFields(mergeLogFields(logFields, source)).Error(content[0])
 		} else {
 			if len(content) > 2 {
-				b, _ := json.Marshal(content[2])
-				c.Logger().Error(content[0], ",", string(b))
+				c.Logger().Error(content[0], content[2], source)
 			} else {
-				c.Logger().Error(content[0])
+				c.Logger().Error(content[0], source)
 			}
 		}
-	default:
+	case LogTypeInfo:
 		if logger, ok := c.Logger().(*EchoLogger); ok {
-			logger.WithFields(logField).Debug(content[0])
+			logger.WithFields(logFields).Info(content[0])
 		} else {
 			if len(content) > 2 {
-				b, _ := json.Marshal(content[2])
-				c.Logger().Debug(content[0], ",", string(b))
+				c.Logger().Info(content[0], content[2])
+			} else {
+				c.Logger().Info(content[0])
+			}
+		}
+	case LogTypeWarn:
+		source := map[string]interface{}{DefaultSourceField: getCaller()}
+		if logger, ok := c.Logger().(*EchoLogger); ok {
+			logger.WithFields(mergeLogFields(logFields, source)).Warn(content[0])
+		} else {
+			if len(content) > 2 {
+				c.Logger().Warn(content[0], content[2], source)
+			} else {
+				c.Logger().Warn(content[0], source)
+			}
+		}
+
+	default:
+		if logger, ok := c.Logger().(*EchoLogger); ok {
+			logger.WithFields(logFields).Debug(content[0])
+		} else {
+			if len(content) > 2 {
+				c.Logger().Debug(content[0], content[2])
 			} else {
 				c.Logger().Debug(content[0])
 			}

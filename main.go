@@ -1,8 +1,10 @@
 package logadapter
 
 import (
+	"context"
 	"io"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -15,6 +17,8 @@ const (
 	LogTypeResponse = "response"
 	LogTypeError    = "error"
 	LogTypeDebug    = "debug"
+	LogTypeInfo     = "info"
+	LogTypeWarn     = "warn"
 	LogTypeSQL      = "sql"
 	LogTypeTrace    = "trace"
 )
@@ -22,16 +26,34 @@ const (
 // custom constants
 const (
 	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
-	DefaultGormSourceField = "source"
+	DefaultPrefix          = "LogAdapter_"
+	DefaultSourceField     = "source"
 )
 
-// Key is key context type
-type Key string
+// HeaderKey is key from http Header
+type HeaderKey string
 
-// Exported constanst
+// Export HeaderKey constanst
 const (
-	CorrelationIDKey Key = "X-User-Correlation-Id"
-	RequestIDKey     Key = "X-Request-ID"
+	CorrelationIDHeaderKey HeaderKey = "X-User-Correlation-Id"
+	RequestIDHeaderKey     HeaderKey = "X-Request-ID"
+	UserInfoHeaderKey      HeaderKey = "X-Userinfo"
+)
+
+// LogKey is key for log messages
+type LogKey string
+
+// Export LogKey constanst
+const (
+	CorrelationIDLogKey LogKey = "correlation_id"
+	RequestIDLogKey     LogKey = "request_id"
+	UserInfoLogKey      LogKey = "user_info"
+)
+
+// Export default LogKeyMap
+var (
+	DefaultLogKeys []LogKey = []LogKey{CorrelationIDLogKey, RequestIDLogKey, UserInfoLogKey}
+	baseSourceDir  string
 )
 
 // LogFormat log format
@@ -92,12 +114,14 @@ type Logger struct {
 	*log.Logger
 	logFormat       LogFormat
 	timestampFormat string
+	logKeys         []LogKey
 }
 
 var l *Logger
 
 func init() {
 	l = New()
+	sourceDir()
 }
 
 // SetFormatter set logger formatter
@@ -168,17 +192,7 @@ func (l *Logger) SetLogFileWithConfig(fileConfig *FileConfig) {
 // SetLogFile set log file, log file will be storaged in logs folder
 func (l *Logger) SetLogFile() {
 	fileConfig := getDefaultFileConfig()
-
-	var lumber = &lumberjack.Logger{
-		Filename:   fileConfig.Filename,
-		MaxSize:    fileConfig.MaxSize,
-		MaxBackups: fileConfig.MaxBackups,
-		MaxAge:     fileConfig.MaxAge,
-		Compress:   fileConfig.IsCompress,
-		LocalTime:  fileConfig.IsUseLocalTime,
-	}
-	writer := io.MultiWriter(os.Stdout, lumber)
-	l.Logger.SetOutput(writer)
+	l.SetLogFileWithConfig(fileConfig)
 }
 
 // SetLogConsole set log console
@@ -223,6 +237,59 @@ func getDefaultConfig() *Config {
 	}
 }
 
+// RemoveLogKey remove a log key will not log this key
+func (l *Logger) RemoveLogKey(key string) {
+	for i := 0; i < len(l.logKeys); i++ {
+		if strings.EqualFold(string(l.logKeys[i]), key) {
+			l.logKeys = append(l.logKeys[:i], l.logKeys[i+1:]...)
+		}
+	}
+}
+
+// RemoveLogKey export remove a log key will not log this key
+func RemoveLogKey(key string) { l.RemoveLogKey(key) }
+
+// addLogKey add one more log key
+func (l *Logger) addLogKey(key string) {
+	if !logKeyExists(l.logKeys, LogKey(key)) {
+		l.logKeys = append(l.logKeys, LogKey(key))
+	}
+}
+
+// SetContext set log with context
+func (l *Logger) SetContext(ctx context.Context) *log.Entry {
+	return l.WithContext(ctx).WithFields(l.GetLogFieldFromContext(ctx))
+}
+
+// GetLogFieldFromContext gets log field from context for log field
+func GetLogFieldFromContext(ctx context.Context) map[string]interface{} {
+	return l.GetLogFieldFromContext(ctx)
+}
+
+// GetLogFieldFromContext gets log field from context for log field
+func (l *Logger) GetLogFieldFromContext(ctx context.Context) map[string]interface{} {
+	fields := make(map[string]interface{})
+	for _, key := range l.logKeys {
+		val := getContextKeyValue(ctx, string(key))
+		if val != nil {
+			fields[string(key)] = val
+		}
+	}
+
+	return fields
+}
+
+// SetCustomLogField set custom log field for always log this field, return new context
+func (l *Logger) SetCustomLogField(ctx context.Context, logKey string, value interface{}) context.Context {
+	l.addLogKey(logKey)
+	return setContextKeyValue(ctx, logKey, value)
+}
+
+// SetCustomLogField set custom log field for always log this field, return new context
+func SetCustomLogField(ctx context.Context, logKey string, value interface{}) context.Context {
+	return l.SetCustomLogField(ctx, logKey, value)
+}
+
 // NewWithConfig returns a logger instance with custom configuration
 func NewWithConfig(config *Config) *Logger {
 	if config == nil {
@@ -241,6 +308,7 @@ func NewWithConfig(config *Config) *Logger {
 		l.SetLogConsole()
 	}
 	l.SetLevel(config.LogLevel)
+	l.logKeys = DefaultLogKeys
 
 	return l
 }
@@ -261,6 +329,7 @@ func New() *Logger {
 		l.SetLogConsole()
 	}
 	l.SetLevel(config.LogLevel)
+	l.logKeys = DefaultLogKeys
 
 	return l
 }
@@ -282,20 +351,103 @@ func Info(args ...interface{}) {
 
 // Warn log with warn level
 func Warn(args ...interface{}) {
-	l.Warn(args...)
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.WithFields(field).Warn(args...)
 }
 
 // Error log with error level
 func Error(args ...interface{}) {
-	l.Error(args...)
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.WithFields(field).Error(args...)
 }
 
 // Fatal log with fatal level
 func Fatal(args ...interface{}) {
-	l.Fatal(args...)
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.WithFields(field).Fatal(args...)
 }
 
 // Panic log with panic level
 func Panic(args ...interface{}) {
-	l.Panic(args...)
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.WithFields(field).Panic(args...)
+}
+
+// TraceWithContext log with trace level
+func TraceWithContext(ctx context.Context, args ...interface{}) {
+	l.SetContext(ctx).Trace(args...)
+}
+
+// DebugWithContext log with debug level
+func DebugWithContext(ctx context.Context, args ...interface{}) {
+	l.SetContext(ctx).Debug(args...)
+}
+
+// InfoWithContext log with info level
+func InfoWithContext(ctx context.Context, args ...interface{}) {
+	l.SetContext(ctx).Info(args...)
+}
+
+// WarnWithContext log with warn level
+func WarnWithContext(ctx context.Context, args ...interface{}) {
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.SetContext(ctx).WithFields(field).Warn(args...)
+}
+
+// ErrorWithContext log with error level
+func ErrorWithContext(ctx context.Context, args ...interface{}) {
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.SetContext(ctx).WithFields(field).Error(args...)
+}
+
+// FatalWithContext log with fatal level
+func FatalWithContext(ctx context.Context, args ...interface{}) {
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.SetContext(ctx).WithFields(field).Fatal(args...)
+}
+
+// PanicWithContext log with panic level
+func PanicWithContext(ctx context.Context, args ...interface{}) {
+	field := log.Fields{DefaultSourceField: getCaller()}
+	l.SetContext(ctx).WithFields(field).Panic(args...)
+}
+
+// LogWithContext log content with context
+// content[0] : message -> interface{},
+// content[1] : log type -> string,
+// content[2] : log field -> map[string]interface{}
+func LogWithContext(ctx context.Context, content ...interface{}) {
+	var logType string
+	if len(content) > 1 {
+		if value, ok := content[1].(string); ok && value != "" {
+			logType = value
+		} else {
+			logType = LogTypeDebug
+		}
+	}
+
+	logFields := mergeLogFields(GetLogFieldFromContext(ctx), map[string]interface{}{"type": logType})
+
+	if len(content) > 2 {
+		if maps, ok := content[2].(map[string]interface{}); ok {
+			logFields = mergeLogFields(logFields, maps)
+		}
+	}
+
+	switch logType {
+	case LogTypeAPI:
+		l.Logger.WithFields(logFields).Info(content[0])
+	case LogTypeError:
+		field := log.Fields{DefaultSourceField: getCaller()}
+		l.Logger.WithFields(mergeLogFields(logFields, field)).Error(content[0])
+	case LogTypeInfo:
+		l.Logger.WithFields(logFields).Info(content[0])
+	case LogTypeWarn:
+		field := log.Fields{DefaultSourceField: getCaller()}
+		l.Logger.WithFields(mergeLogFields(logFields, field)).Warn(content[0])
+	case LogTypeRequest, LogTypeResponse:
+		l.Logger.WithFields(logFields).Info(content[0])
+	default:
+		l.Logger.WithFields(logFields).Debug(content[0])
+	}
 }
