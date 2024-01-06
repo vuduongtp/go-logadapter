@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
-	"gorm.io/gorm/utils"
 )
 
 // GormLogger model
@@ -75,7 +74,7 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 	fields := mergeLogFields(trace, GetLogFieldFromContext(ctx))
 
 	if l.SourceField != "" {
-		fields[l.SourceField] = utils.FileWithLineNum()
+		fields[l.SourceField] = getCaller()
 	}
 	if err != nil && !(errors.Is(err, gorm.ErrRecordNotFound) && l.SkipErrRecordNotFound) {
 		fields[logrus.ErrorKey] = err

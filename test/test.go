@@ -8,12 +8,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"github.com/vuduongtp/go-logadapter"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	// "gorm.io/driver/sqlite"
+	// "gorm.io/gorm"
+	// "gorm.io/gorm/logger"
 )
 
 func main() {
+	testSetDefaultFields()
 	testSetCustomLogField()
 	testSimpleLog()
 	testNewWithConfig()
@@ -45,6 +46,16 @@ func testSetCustomLogField() {
 
 	// {"level":"info","msg":"This is message 1","test":"test","time":"2023-06-22 21:41:35.48296"}
 	// {"level":"info","msg":"This is message 2","time":"2023-06-22 21:41:35.48305"}
+}
+
+func testSetDefaultFields() {
+	fields := map[string]interface{}{
+		"env": "production",
+	}
+	logadapter.SetDefaultFields(fields)
+	logadapter.Info("testSetDefaultFields")
+
+	// {"env":"production","level":"info","msg":"testSetDefaultFields","time":"2024-01-06 15:36:12.10911"}
 }
 
 func testNewWithConfig() {
@@ -104,30 +115,30 @@ func testSetLogFile() {
 	logadapter.Debug("message")
 }
 
-func testGormAdapter() {
-	isDebug := true
-	// set log adapter for gorm logging
-	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
-	if err != nil {
-		panic("failed to connect database")
-	}
+// func testGormAdapter() {
+// 	isDebug := true
+// 	// set log adapter for gorm logging
+// 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+// 	if err != nil {
+// 		panic("failed to connect database")
+// 	}
 
-	if isDebug {
-		db.Logger = logadapter.NewGormLogger().LogMode(logger.Info)
-	} else {
-		db.Logger = logadapter.NewGormLogger().LogMode(logger.Silent)
-	}
+// 	if isDebug {
+// 		db.Logger = logadapter.NewGormLogger().LogMode(logger.Info)
+// 	} else {
+// 		db.Logger = logadapter.NewGormLogger().LogMode(logger.Silent)
+// 	}
 
-	// set one more log key
-	ctx := context.Background()
-	ctx = logadapter.SetCustomLogField(ctx, "database_name", "test")
+// 	// set one more log key
+// 	ctx := context.Background()
+// 	ctx = logadapter.SetCustomLogField(ctx, "database_name", "test")
 
-	type User interface{}
-	user := new(User)
-	db.WithContext(ctx).First(user)
+// 	type User interface{}
+// 	user := new(User)
+// 	db.WithContext(ctx).First(user)
 
-	// {"level":"debug","database_name":"test","msg":"","time":"2023-06-21 16:53:53.14278","row":1,"query":"SELECT * FROM users ORDER BY id LIMIT 1","latency":"63.995042ms","latency_ms":63,"type":"sql"}
-}
+// 	// {"level":"debug","database_name":"test","msg":"","time":"2023-06-21 16:53:53.14278","row":1,"query":"SELECT * FROM users ORDER BY id LIMIT 1","latency":"63.995042ms","latency_ms":63,"type":"sql"}
+// }
 
 func testEchoAdapter() {
 	isDebug := true

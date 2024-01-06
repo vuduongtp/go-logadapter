@@ -86,12 +86,29 @@ func logKeyExists(arr []LogKey, key LogKey) bool {
 }
 
 func getCaller() string {
-	for i := 2; i < 15; i++ {
-		_, file, line, ok := runtime.Caller(i)
-		if ok && (!strings.HasPrefix(file, baseSourceDir) || strings.HasSuffix(file, "_test.go")) {
-			return fmt.Sprintf("%s:%d", file, line)
+	var caller string
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	if n == 0 {
+		return caller
+	}
+	pc = pc[:n]
+	frames := runtime.CallersFrames(pc)
+	for {
+		frame, more := frames.Next()
+		if strings.Contains(frame.File, "runtime/") || strings.Contains(frame.File, baseSourceDir) {
+			continue
+		}
+		if len(frame.Function) > 0 && len(frame.File) > 0 {
+			if len(caller) > 0 {
+				caller += "\n"
+			}
+			caller += fmt.Sprintf("%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
+		}
+		if !more {
+			break
 		}
 	}
 
-	return ""
+	return caller
 }

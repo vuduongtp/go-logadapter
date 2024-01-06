@@ -27,7 +27,7 @@ const (
 const (
 	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
 	DefaultPrefix          = "LogAdapter_"
-	DefaultSourceField     = "source"
+	DefaultSourceField     = "stack_trace"
 )
 
 // HeaderKey is key from http Header
@@ -124,6 +124,18 @@ func init() {
 	sourceDir()
 }
 
+type customFormat struct {
+	defaultFields map[string]interface{}
+	formatter     log.Formatter
+}
+
+func (cl customFormat) Format(entry *log.Entry) ([]byte, error) {
+	for k, v := range cl.defaultFields {
+		entry.Data[k] = v
+	}
+	return cl.formatter.Format(entry)
+}
+
 // SetFormatter set logger formatter
 func SetFormatter(logFormat LogFormat) { l.SetFormatter(logFormat) }
 
@@ -167,6 +179,17 @@ func (l *Logger) SetTimestampFormat(timestampFormat string) {
 
 // GetTimestampFormat get timestamp format
 func GetTimestampFormat() string { return l.timestampFormat }
+
+// SetDefaultFields set default fields for all log
+func SetDefaultFields(fields map[string]interface{}) { l.SetDefaultFields(fields) }
+
+// SetDefaultFields set default fields for all log
+func (l *Logger) SetDefaultFields(fields map[string]interface{}) {
+	l.Logger.SetFormatter(customFormat{
+		defaultFields: fields,
+		formatter:     l.Formatter,
+	})
+}
 
 // SetLogFile set log file, log file will be storaged in logs folder
 func SetLogFile() { l.SetLogFile() }
@@ -259,6 +282,11 @@ func (l *Logger) addLogKey(key string) {
 // SetContext set log with context
 func (l *Logger) SetContext(ctx context.Context) *log.Entry {
 	return l.WithContext(ctx).WithFields(l.GetLogFieldFromContext(ctx))
+}
+
+// SetContext set log with context
+func SetContext(ctx context.Context) *log.Entry {
+	return l.SetContext(ctx)
 }
 
 // GetLogFieldFromContext gets log field from context for log field
