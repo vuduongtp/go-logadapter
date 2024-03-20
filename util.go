@@ -31,7 +31,7 @@ func getLogFile() string {
 	} else {
 		path += "/"
 	}
-	return path + fmt.Sprintf("log_%s.log", time.Now().Format("2006-01-02T15:04:05"))
+	return path + fmt.Sprintf("log_%s.log", time.Now().Format("2006-01-02"))
 }
 
 func sourceDir() {
@@ -85,30 +85,7 @@ func logKeyExists(arr []LogKey, key LogKey) bool {
 	return false
 }
 
-func getCaller() string {
-	var caller string
-	pc := make([]uintptr, 10)
-	n := runtime.Callers(2, pc)
-	if n == 0 {
-		return caller
-	}
-	pc = pc[:n]
-	frames := runtime.CallersFrames(pc)
-	for {
-		frame, more := frames.Next()
-		if strings.Contains(frame.File, "runtime/") || strings.Contains(frame.File, baseSourceDir) {
-			continue
-		}
-		if len(frame.Function) > 0 && len(frame.File) > 0 {
-			if len(caller) > 0 {
-				caller += "\n"
-			}
-			caller += fmt.Sprintf("%s\n\t%s:%d", frame.Function, frame.File, frame.Line)
-		}
-		if !more {
-			break
-		}
-	}
-
-	return caller
+func getFunctionName(f string) string {
+	parts := strings.Split(f, "/")
+	return parts[len(parts)-1]
 }

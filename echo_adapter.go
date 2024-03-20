@@ -364,7 +364,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 			}
 		}
 	case LogTypeError:
-		source := map[string]interface{}{DefaultSourceField: getCaller()}
+		source := map[string]interface{}{DefaultSourceField: l.getCaller()}
 		if logger, ok := c.Logger().(*EchoLogger); ok {
 			logger.WithFields(mergeLogFields(logFields, source)).Error(content[0])
 		} else {
@@ -385,7 +385,7 @@ func LogWithEchoContext(c echo.Context, content ...interface{}) {
 			}
 		}
 	case LogTypeWarn:
-		source := map[string]interface{}{DefaultSourceField: getCaller()}
+		source := map[string]interface{}{DefaultSourceField: l.getCaller()}
 		if logger, ok := c.Logger().(*EchoLogger); ok {
 			logger.WithFields(mergeLogFields(logFields, source)).Warn(content[0])
 		} else {

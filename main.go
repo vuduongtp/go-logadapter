@@ -2,93 +2,27 @@ package logadapter
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-// custom logtype
-const (
-	LogTypeAPI      = "api"
-	LogTypeRequest  = "request"
-	LogTypeResponse = "response"
-	LogTypeError    = "error"
-	LogTypeDebug    = "debug"
-	LogTypeInfo     = "info"
-	LogTypeWarn     = "warn"
-	LogTypeSQL      = "sql"
-	LogTypeTrace    = "trace"
-)
-
-// custom constants
-const (
-	DefaultTimestampFormat = "2006-01-02 15:04:05.00000"
-	DefaultPrefix          = "LogAdapter_"
-	DefaultSourceField     = "stack_trace"
-)
-
 // HeaderKey is key from http Header
 type HeaderKey string
-
-// Export HeaderKey constanst
-const (
-	CorrelationIDHeaderKey HeaderKey = "X-User-Correlation-Id"
-	RequestIDHeaderKey     HeaderKey = "X-Request-ID"
-	UserInfoHeaderKey      HeaderKey = "X-Userinfo"
-)
 
 // LogKey is key for log messages
 type LogKey string
 
-// Export LogKey constanst
-const (
-	CorrelationIDLogKey LogKey = "correlation_id"
-	RequestIDLogKey     LogKey = "request_id"
-	UserInfoLogKey      LogKey = "user_info"
-)
-
-// Export default LogKeyMap
-var (
-	DefaultLogKeys []LogKey = []LogKey{CorrelationIDLogKey, RequestIDLogKey, UserInfoLogKey}
-	baseSourceDir  string
-)
-
 // LogFormat log format
 type LogFormat uint32
 
-// custom log format
-const (
-	JSONFormat LogFormat = iota
-	PrettyJSONFormat
-	TextFormat
-)
-
 // Level log level
 type Level uint32
-
-const (
-	// PanicLevel level, highest level of severity. Logs and then calls panic with the
-	// message passed to Debug, Info, ...
-	PanicLevel Level = iota
-	// FatalLevel level. Logs and then calls `logger.Exit(1)`. It will exit even if the
-	// logging level is set to Panic.
-	FatalLevel
-	// ErrorLevel level. Logs. Used for errors that should definitely be noted.
-	// Commonly used for hooks to send errors to an error tracking service.
-	ErrorLevel
-	// WarnLevel level. Non-critical entries that deserve eyes.
-	WarnLevel
-	// InfoLevel level. General operational entries about what's going on inside the
-	// application.
-	InfoLevel
-	// DebugLevel level. Usually only enabled when debugging. Very verbose logging.
-	DebugLevel
-	// TraceLevel level. Designates finer-grained informational events than the Debug.
-	TraceLevel
-)
 
 // Config config instance log
 type Config struct {
@@ -115,6 +49,7 @@ type Logger struct {
 	logFormat       LogFormat
 	timestampFormat string
 	logKeys         []LogKey
+	ignoredPaths    []string
 }
 
 var l *Logger
@@ -134,6 +69,18 @@ func (cl customFormat) Format(entry *log.Entry) ([]byte, error) {
 		entry.Data[k] = v
 	}
 	return cl.formatter.Format(entry)
+}
+
+// SetIgnoredPaths for ignored path in stack trace field.
+// By default logadapter print stacktrace with log has lever higher than WARN, always print stack trace with gorm_adapter
+// Not to print file path has "runtime/" in stack trace. We use logadapter.UpdateIgnoredPaths([]string{"runtime/"})
+func SetIgnoredPaths(paths []string) { l.SetIgnoredPaths(paths) }
+
+// SetIgnoredPaths for ignored path in stack trace field.
+// By default logadapter print stacktrace with log has lever higher than WARN, always print stack trace with gorm_adapter
+// Not to print file path has "runtime/" in stack trace. We use logadapter.UpdateIgnoredPaths([]string{"runtime/"})
+func (l *Logger) SetIgnoredPaths(paths []string) {
+	l.ignoredPaths = paths
 }
 
 // SetFormatter set logger formatter
@@ -185,10 +132,12 @@ func SetDefaultFields(fields map[string]interface{}) { l.SetDefaultFields(fields
 
 // SetDefaultFields set default fields for all log
 func (l *Logger) SetDefaultFields(fields map[string]interface{}) {
-	l.Logger.SetFormatter(customFormat{
-		defaultFields: fields,
-		formatter:     l.Formatter,
-	})
+	if len(fields) > 0 {
+		l.Logger.SetFormatter(customFormat{
+			defaultFields: fields,
+			formatter:     l.Formatter,
+		})
+	}
 }
 
 // SetLogFile set log file, log file will be storaged in logs folder
@@ -318,6 +267,47 @@ func SetCustomLogField(ctx context.Context, logKey string, value interface{}) co
 	return l.SetCustomLogField(ctx, logKey, value)
 }
 
+func (l *Logger) getCaller() string {
+	var caller string
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	if n == 0 {
+		return caller
+	}
+	pc = pc[:n]
+	frames := runtime.CallersFrames(pc)
+	for {
+		frame, more := frames.Next()
+
+		if strings.Contains(frame.File, baseSourceDir) {
+			continue
+		}
+		var isIgnore bool
+		for _, path := range l.ignoredPaths {
+			if strings.Contains(frame.File, path) {
+				isIgnore = true
+				continue
+			}
+		}
+		if isIgnore {
+			continue
+		}
+
+		if len(frame.Function) > 0 && len(frame.File) > 0 {
+			if len(caller) > 0 {
+				caller += "\n"
+			}
+			caller += fmt.Sprintf("%s\n\t%s:%d", getFunctionName(frame.Function), frame.File, frame.Line)
+		}
+
+		if !more {
+			break
+		}
+	}
+
+	return caller
+}
+
 // NewWithConfig returns a logger instance with custom configuration
 func NewWithConfig(config *Config) *Logger {
 	if config == nil {
@@ -379,25 +369,25 @@ func Info(args ...interface{}) {
 
 // Warn log with warn level
 func Warn(args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.WithFields(field).Warn(args...)
 }
 
 // Error log with error level
 func Error(args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.WithFields(field).Error(args...)
 }
 
 // Fatal log with fatal level
 func Fatal(args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.WithFields(field).Fatal(args...)
 }
 
 // Panic log with panic level
 func Panic(args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.WithFields(field).Panic(args...)
 }
 
@@ -418,25 +408,25 @@ func InfoWithContext(ctx context.Context, args ...interface{}) {
 
 // WarnWithContext log with warn level
 func WarnWithContext(ctx context.Context, args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.SetContext(ctx).WithFields(field).Warn(args...)
 }
 
 // ErrorWithContext log with error level
 func ErrorWithContext(ctx context.Context, args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.SetContext(ctx).WithFields(field).Error(args...)
 }
 
 // FatalWithContext log with fatal level
 func FatalWithContext(ctx context.Context, args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.SetContext(ctx).WithFields(field).Fatal(args...)
 }
 
 // PanicWithContext log with panic level
 func PanicWithContext(ctx context.Context, args ...interface{}) {
-	field := log.Fields{DefaultSourceField: getCaller()}
+	field := log.Fields{DefaultSourceField: l.getCaller()}
 	l.SetContext(ctx).WithFields(field).Panic(args...)
 }
 
@@ -466,12 +456,12 @@ func LogWithContext(ctx context.Context, content ...interface{}) {
 	case LogTypeAPI:
 		l.Logger.WithFields(logFields).Info(content[0])
 	case LogTypeError:
-		field := log.Fields{DefaultSourceField: getCaller()}
+		field := log.Fields{DefaultSourceField: l.getCaller()}
 		l.Logger.WithFields(mergeLogFields(logFields, field)).Error(content[0])
 	case LogTypeInfo:
 		l.Logger.WithFields(logFields).Info(content[0])
 	case LogTypeWarn:
-		field := log.Fields{DefaultSourceField: getCaller()}
+		field := log.Fields{DefaultSourceField: l.getCaller()}
 		l.Logger.WithFields(mergeLogFields(logFields, field)).Warn(content[0])
 	case LogTypeRequest, LogTypeResponse:
 		l.Logger.WithFields(logFields).Info(content[0])

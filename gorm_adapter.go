@@ -74,7 +74,7 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 	fields := mergeLogFields(trace, GetLogFieldFromContext(ctx))
 
 	if l.SourceField != "" {
-		fields[l.SourceField] = getCaller()
+		fields[l.SourceField] = l.getCaller()
 	}
 	if err != nil && !(errors.Is(err, gorm.ErrRecordNotFound) && l.SkipErrRecordNotFound) {
 		fields[logrus.ErrorKey] = err
